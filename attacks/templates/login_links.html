@@ -1,1 +1,0 @@
-<nav class="lab-links" aria-label="實驗導覽"><a href="{{ hub_url }}">Lab 總覽</a><a href="/security">更改安全設定</a><a href="{{ '/login' if is_teacher else '/teacher/login' }}">{{ '學生登入' if is_teacher else '教師登入' }}</a><a href="/register">註冊</a></nav>{% for text in get_flashed_messages() %}<div class="login-feedback" role="status">{{ text }}</div>{% endfor %}

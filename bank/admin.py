@@ -17,6 +17,7 @@ def is_admin():
     if not session.get('uid'):
         return False
     with connect() as db:
+        if session.get('portal_session') and not db.execute('SELECT 1 FROM portal_sessions WHERE id=? AND user_id=?',(session['portal_session'],session['uid'])).fetchone():return False
         row = db.execute("SELECT is_admin FROM users WHERE id=? AND EXISTS (SELECT 1 FROM metadata WHERE key='generation' AND value=?)", (session['uid'], session.get('generation'))).fetchone()
     return bool(row and row['is_admin'])
 

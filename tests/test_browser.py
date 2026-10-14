@@ -38,6 +38,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
                 page.locator('[name=password]').fill('test-pass-123')
                 page.get_by_role('button', name='建立帳戶').click()
             page.goto(bank_url + '/login')
+            page.get_by_role('button', name='登出', exact=True).click()
             page.goto(evil_same + '/playground')
             assert page.locator('textarea').count() == 0
             page.get_by_role('button', name='領取活動獎勵', exact=True).click()
@@ -48,18 +49,20 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
             page.locator('[name=password]').fill('test-pass-123')
             page.get_by_role('button', name='登入', exact=True).click()
             page.wait_for_url(evil_same + '/playground')
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             assert page.evaluate("fetch('/api/account').then(r => r.json())")['account']['balance'] == 500000
             page.get_by_role('button', name='登出', exact=True).click()
             page.goto(bank_url + '/login')
             page.locator('[name=username]').fill('bob')
             page.locator('[name=password]').fill('test-pass-123')
             page.get_by_role('button', name='登入', exact=True).click()
+            page.goto(bank_url + '/bank')
             recipient = page.locator('[data-copy]').get_attribute('data-copy')
             page.get_by_role('button', name='登出', exact=True).click()
             page.locator('[name=username]').fill('alice')
             page.locator('[name=password]').fill('test-pass-123')
             page.get_by_role('button', name='登入', exact=True).click()
+            page.goto(bank_url + '/bank')
             page.locator('[name=recipient]').fill(recipient)
             page.locator('[name=amount]').fill('25')
             page.get_by_role('button', name='確認轉帳').click()
@@ -77,9 +80,9 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
                 assert has_cookie == expected_cookie
                 assert response.status == (302 if expected_cookie else 401)
                 if expected_cookie:
-                    assert response.headers['location'] == '/'
+                    assert response.headers['location'] == '/bank'
                 observations.append({'policy': policy, 'source': source, 'cookie_present': has_cookie, 'origin': headers.get('origin'), 'sec_fetch_site': headers.get('sec-fetch-site'), 'status': response.status, 'location': response.headers.get('location')})
-                page.goto(bank_url)
+                page.goto(bank_url + '/bank')
             page.goto(bank_url + '/lab')
             page.locator('[name=mode]').select_option('protected')
             page.get_by_role('button', name='套用實驗設定').click()
@@ -88,7 +91,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
             with page.expect_response(lambda r: r.url.split('?')[0] == bank_url + '/transfer') as pending:
                 page.get_by_role('button', name='發送偽造轉帳').click()
             assert pending.value.status == 403
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             data = page.evaluate("fetch('/api/account').then(r => r.json())")
             expected_balance = 500000 - 2500 - 10000 * (1 + int(policy == 'None'))
             assert data['account']['balance'] == expected_balance
@@ -108,7 +111,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
                 page.get_by_role('button', name='領取活動獎勵', exact=True).click()
             assert pending.value.status == 303
             assert pending.value.request.all_headers()['origin'] == evil_same
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             data = page.evaluate("fetch('/api/account').then(r => r.json())")
             assert data['account']['balance'] == expected_balance - 7300
             # Same editor payload must fail after switching protection on.
@@ -123,7 +126,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
             with page.expect_response(lambda r: r.url.split('?')[0] == bank_url + '/transfer') as pending:
                 page.get_by_role('button', name='領取活動獎勵', exact=True).click()
             assert pending.value.status == 403
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             assert page.evaluate("fetch('/api/account').then(r => r.json())")['account']['balance'] == expected_balance - 7300
             page.goto(bank_url + '/lab')
             page.locator('[name=mode]').select_option('vulnerable')
@@ -138,7 +141,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
             page.wait_for_function("document.querySelector('.hero p')?.textContent.includes('領取成功')")
             assert page.url.startswith(evil_same + '/playground')
             assert any('請至帳戶確認已領取的獎勵金' in message for message in dialogs)
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             assert page.evaluate("fetch('/api/account').then(r => r.json())")['account']['balance'] == expected_balance - 17300
             from bank.db import connect
             with app.app_context(), connect() as db:
@@ -154,7 +157,7 @@ def test_real_browser_sites(tmp_path, policy, secure, domain):
             with page.expect_response(lambda r: r.url.split('?')[0] == bank_url + '/transfer') as pending:
                 page.get_by_role('button', name='領取活動獎勵', exact=True).click()
             assert pending.value.status == 403
-            page.goto(bank_url)
+            page.goto(bank_url + '/bank')
             assert page.evaluate("fetch('/api/account').then(r => r.json())")['account']['balance'] == expected_balance - 17300
             if policy == 'Lax':
                 page.screenshot(path='test-results/dashboard.png', full_page=True)

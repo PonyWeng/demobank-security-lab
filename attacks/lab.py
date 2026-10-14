@@ -26,6 +26,7 @@ def initialize():
 CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY,username TEXT,content TEXT);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
 CREATE TABLE IF NOT EXISTS captures(id INTEGER PRIMARY KEY,content TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);''')
+        c.execute('CREATE TABLE IF NOT EXISTS xss_sessions(hash TEXT PRIMARY KEY,username TEXT NOT NULL,generation TEXT NOT NULL,expires INTEGER NOT NULL)')
         c.execute("INSERT OR IGNORE INTO settings VALUES ('generation',?)",(secrets.token_hex(16),))
 
 def urls():
@@ -45,19 +46,48 @@ def create_app(kind,config=None):
     def verify():
         if not session.get('token') or not secrets.compare_digest(session['token'],request.form.get('csrf_token','')): abort(403,'Invalid CSRF Token')
     def logged():
+        from portal_auth import identity
+        if not session.get('portal_session'):return False
+        user=identity(portal_path(),session['portal_session'],session.get('portal_generation'))
+        if not user:return False
         with db() as c:
             generation=c.execute("SELECT value FROM settings WHERE key='generation'").fetchone()['value']
         return session.get('username') and session.get('generation')==generation
+    def portal_path():
+        from teacher_password import bank_database
+        return app.config.get('PORTAL_DATABASE') or bank_database()
+    def portal_origin():
+        try:
+            with sqlite3.connect(portal_path()) as c:
+                row=c.execute("SELECT value FROM metadata WHERE key='public_endpoints'").fetchone()
+            if row:return json.loads(row[0])['bank']
+        except sqlite3.OperationalError:pass
+        return 'http://bank.localhost:5000'
+    def enter_from_portal():return redirect(portal_origin()+'/labs/enter/'+kind)
     def teacher():
-        if not logged() or not session.get('teacher'): abort(403,'Teacher login required')
-        with db() as c:
-            u=c.execute('SELECT is_admin FROM users WHERE username=?',(session['username'],)).fetchone()
+        if not logged():abort(403,'請從課程入口登入')
+        from portal_auth import identity
+        u=identity(portal_path(),session['portal_session'],session['portal_generation'])
         if not u or not u['is_admin']: abort(403)
     def sign_in(user,admin=False):
         with db() as c:generation=c.execute("SELECT value FROM settings WHERE key='generation'").fetchone()['value']
         mode=session.get('mode','vulnerable');gate=session.get('gate',False)
         session.clear()
         session.update(username=user['username'],teacher=admin,generation=generation,mode=mode,gate=gate)
+    def xss_user():
+        import hashlib,time
+        value=request.cookies.get('xss_lab_session','')
+        with db() as c:
+            row=c.execute('SELECT username FROM xss_sessions WHERE hash=? AND generation=? AND expires>?',(hashlib.sha256(value.encode()).hexdigest(),session.get('generation'),int(time.time()))).fetchone()
+        return row['username'] if row else session['username']
+    def create_xss_session(username):
+        import hashlib,time
+        value=secrets.token_urlsafe(32)
+        with db() as c:c.execute('INSERT INTO xss_sessions VALUES (?,?,?,?)',(hashlib.sha256(value.encode()).hexdigest(),username,session['generation'],int(time.time())+7200))
+        return value
+    def revoke_xss_session():
+        import hashlib
+        with db() as c:c.execute('DELETE FROM xss_sessions WHERE hash=?',(hashlib.sha256(request.cookies.get('xss_lab_session','').encode()).hexdigest(),))
     @app.context_processor
     def helpers():
         from teacher_password import bank_database
@@ -66,78 +96,45 @@ def create_app(kind,config=None):
             with sqlite3.connect(bank_database()) as c:
                 row=c.execute("SELECT value FROM metadata WHERE key='public_endpoints'").fetchone()
             if row:hub=json.loads(row[0])['bank']+'/labs'
-        return dict(kind=kind,token=token,hub_url=hub,urls=urls(),mode=session.get('mode','vulnerable'),teacher=bool(logged() and session.get('teacher')))
+        from portal_auth import identity
+        user=identity(portal_path(),session.get('portal_session'),session.get('portal_generation')) if session.get('portal_session') else None
+        return dict(kind=kind,token=token,hub_url=portal_origin()+'/labs',urls=urls(),mode=session.get('mode','vulnerable'),teacher=bool(logged() and user['is_admin']))
     @app.before_request
     def gate():
         host=request.host.split(':')[0]
         allowed={'localhost','127.0.0.1',f'{kind}.localhost',urlsplit(urls()[kind]).hostname}
         if host not in allowed: abort(400,'Host not configured; use localhost teacher admin first')
-        if config_value('LAB_ACCESS_CODE') and not session.get('gate') and request.endpoint not in ('access','static'):
-            if request.endpoint!='steal': return redirect('/access')
+        if request.endpoint not in ('static','steal','auth_entry','login','register','access') and not logged():return enter_from_portal()
+    @app.get('/auth/entry')
+    def auth_entry():
+        from portal_auth import consume
+        result=consume(portal_path(),request.args.get('ticket',''),kind)
+        if not result:abort(403,'登入票證無效或過期，請回課程入口重新選擇 Lab。')
+        user,identifier,generation=result
+        with db() as c:
+            c.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?) ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash,is_admin=excluded.is_admin',(user['username'],user['password_hash'],user['is_admin']))
+        sign_in(user,bool(user['is_admin']))
+        session.update(portal_session=identifier,portal_generation=generation)
+        response=redirect('/')
+        if kind=='xss':response.set_cookie('xss_lab_session',create_xss_session(user['username']),httponly=session.get('mode','vulnerable')=='protected',secure=app.config['SESSION_COOKIE_SECURE'],samesite='Lax',max_age=7200)
+        return response
     @app.route('/access',methods=['GET','POST'])
     def access():
-        if request.method=='POST':
-            verify()
-            if secrets.compare_digest(request.form.get('code',''),config_value('LAB_ACCESS_CODE','')):
-                session['gate']=True
-                return redirect('/')
-            flash('課程代碼錯誤')
-        return render_template('auth.html',access=True)
+        return redirect(portal_origin()+'/access')
     @app.route('/register',methods=['GET','POST'])
     def register():
-        if request.method=='GET' and logged():return redirect('/')
-        if request.method=='POST':
-            verify()
-            name=request.form.get('username','').strip(); password=request.form.get('password','')
-            if not name.isascii() or not name.replace('_','').isalnum() or not 3<=len(name)<=32 or not 8<=len(password)<=128:
-                flash('帳號需 3–32 字元英數或底線；密碼需 8–128 字元。')
-            else:
-                with db() as c:
-                    c.execute('BEGIN IMMEDIATE')
-                    existing=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
-                    if not existing:
-                        c.execute('INSERT INTO users(username,password_hash) VALUES (?,?)',(name,generate_password_hash(password)))
-                        existing=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
-                        valid=True
-                    else:valid=check_password_hash(existing['password_hash'],password)
-                if valid:
-                    sign_in(existing,bool(existing['is_admin']))
-                    flash('已登入。此帳號可用於 SQL、XSS 與 Collector，不需再註冊。')
-                    return redirect('/')
-                flash('帳號已存在，請使用原密碼登入，或換一個帳號。')
-        return render_template('xss_register.html' if kind=='xss' else 'auth.html',register=True)
+        return redirect(portal_origin()+'/register')
     @app.route('/login',methods=['GET','POST'])
     @app.route('/teacher/login',methods=['GET','POST'])
     def login():
-        is_teacher=request.path.startswith('/teacher')
-        if request.method=='GET' and logged() and (not is_teacher or session.get('teacher')):
-            return redirect('/admin' if is_teacher else '/')
-        if request.method=='POST':
-            verify()
-            name=request.form.get('username',''); password=request.form.get('password','')
-            with db() as c:
-                real=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
-                valid=bool(real and check_password_hash(real['password_hash'],password))
-                if kind=='sql' and not is_teacher and session.get('mode','vulnerable')=='vulnerable':
-                    query=f"SELECT * FROM users WHERE username='{name}' AND 1={int(valid)}"
-                    try: user=c.execute(query).fetchone()
-                    except sqlite3.Error: user=None
-                else: user=real if valid else None
-                generation=c.execute("SELECT value FROM settings WHERE key='generation'").fetchone()['value']
-            if user and (not is_teacher or user['is_admin']):
-                mode=session.get('mode','vulnerable'); gate=session.get('gate',False)
-                verified_admin=bool(valid and real and user['id']==real['id'] and user['is_admin'])
-                session.clear();session.update(username=user['username'],teacher=verified_admin,generation=generation,mode=mode,gate=gate)
-                return redirect('/admin' if is_teacher else '/')
-            flash('登入失敗')
-        return render_template(f'{kind}_login.html' if kind in ('sql','xss') else 'auth.html',is_teacher=is_teacher)
+        return redirect('/') if logged() else enter_from_portal()
     @app.route('/',methods=['GET','POST'])
     def index():
         if kind=='collector':
-            if not logged():return redirect('/login')
+            if not logged():return enter_from_portal()
             with db() as c: rows=c.execute('SELECT * FROM captures ORDER BY id DESC LIMIT 100').fetchall()
             return render_template('collector.html',rows=rows)
-        if not logged(): return redirect('/login')
+        if not logged():return enter_from_portal()
         if kind=='sql' and request.method=='GET':
             with db() as c:
                 tables=[]
@@ -145,16 +142,35 @@ def create_app(kind,config=None):
                     columns=c.execute(f'PRAGMA table_info({name})').fetchall()
                     data=c.execute(f'SELECT * FROM {name} LIMIT 100').fetchall()
                     tables.append({'table':name,'columns':columns,'rows':data})
-            return render_template('sql_index.html',db_info=tables,user=session['username'],isAdmin=int(session.get('teacher',False)))
+            return render_template('sql_index.html',db_info=tables,user=session['username'])
         if request.method=='POST':
             verify()
             if kind=='xss':
                 content=request.form.get('content','')
                 if len(content)>10000: abort(400)
-                with db() as c: c.execute('INSERT INTO messages(username,content) VALUES (?,?)',(session['username'],content))
+                with db() as c: c.execute('INSERT INTO messages(username,content) VALUES (?,?)',(xss_user(),content))
             return redirect('/')
         with db() as c: rows=c.execute('SELECT * FROM messages ORDER BY id DESC LIMIT 100').fetchall() if kind=='xss' else []
-        return render_template('xss_board.html',messages=rows,user_id=session['username'])
+        return render_template('xss_board.html',messages=rows,user_id=xss_user())
+    @app.route('/simulate/login',methods=['GET','POST'])
+    def simulate_login():
+        if kind!='sql':abort(404)
+        result=None;query=''
+        if request.method=='POST':
+            verify()
+            name=request.form.get('username','');password=request.form.get('password','')
+            with db() as c:
+                real=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
+                valid=bool(real and check_password_hash(real['password_hash'],password))
+                if session.get('mode','vulnerable')=='vulnerable':
+                    query=f"SELECT * FROM users WHERE username='{name}' AND 1={int(valid)}"
+                    try: row=c.execute(query).fetchone()
+                    except sqlite3.Error:row=None
+                else:
+                    query='SELECT * FROM users WHERE username=? (參數化，再驗證密碼雜湊)'
+                    row=real if valid else None
+            result='模擬登入成功：'+row['username'] if row else '模擬登入失敗'
+        return render_template('simulate_login.html',result=result,query=query)
     @app.post('/delete_message/<int:msg_id>')
     def delete_message(msg_id):
         if kind!='xss':abort(404)
@@ -163,7 +179,7 @@ def create_app(kind,config=None):
         with db() as c:
             row=c.execute('SELECT username FROM messages WHERE id=?',(msg_id,)).fetchone()
             if not row:abort(404)
-            if row['username']!=session['username']:abort(403)
+            if row['username']!=xss_user():abort(403)
             c.execute('DELETE FROM messages WHERE id=?',(msg_id,))
         return redirect('/')
     @app.post('/admin/clear_messages')
@@ -180,7 +196,11 @@ def create_app(kind,config=None):
             name=request.form.get('username','').strip();password=request.form.get('password','')
             if not name.isascii() or not name.replace('_','').isalnum() or not 3<=len(name)<=32 or not 8<=len(password)<=128:abort(400,'帳號或密碼格式不正確')
             try:
-                with db() as c:c.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?)',(name,generate_password_hash(password),int(request.form.get('isAdmin')=='on')))
+                hashed=generate_password_hash(password)
+                with sqlite3.connect(portal_path()) as c:
+                    uid=c.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?)',(name,hashed,int(request.form.get('isAdmin')=='on'))).lastrowid
+                    c.execute('INSERT INTO accounts(user_id,number,balance) VALUES (?,?,500000)',(uid,'DB'+secrets.token_hex(6).upper()))
+                with db() as c:c.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?) ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash,is_admin=excluded.is_admin',(name,hashed,int(request.form.get('isAdmin')=='on')))
                 message='User added successfully!'
             except sqlite3.IntegrityError:message='User already exists.'
         return render_template('sql_add_user.html',message=message)
@@ -191,7 +211,11 @@ def create_app(kind,config=None):
             if request.form.get('mode') not in ('vulnerable','protected'): abort(400)
             session['mode']=request.form['mode']
             flash('設定已套用，只影響本次 Session')
-            return redirect('/security')
+            response=redirect('/security')
+            if kind=='xss':
+                username=xss_user();revoke_xss_session()
+                response.set_cookie('xss_lab_session',create_xss_session(username),httponly=session['mode']=='protected',secure=app.config['SESSION_COOKIE_SECURE'],samesite='Lax',max_age=7200)
+            return response
         return render_template('security.html')
     @app.route('/admin',methods=['GET','POST'])
     def admin():
@@ -206,14 +230,16 @@ def create_app(kind,config=None):
             if len(set(new.values()))!=3: abort(400)
             with db() as c: c.execute("INSERT INTO settings VALUES ('urls',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",(json.dumps(new),))
             return redirect('/admin')
-        with db() as c: users=c.execute('SELECT username,is_admin FROM users').fetchall()
+        with sqlite3.connect(portal_path()) as c:
+            c.row_factory=sqlite3.Row
+            users=c.execute('SELECT username,is_admin FROM users').fetchall()
         return render_template('admin.html',users=users)
     @app.post('/admin/reset')
     def reset():
         teacher();verify()
         if request.form.get('confirmation')!='RESET':abort(400)
         with db() as c:
-            c.execute('DELETE FROM messages');c.execute('DELETE FROM captures');c.execute('DELETE FROM users WHERE is_admin=0')
+            c.execute('DELETE FROM messages');c.execute('DELETE FROM captures');c.execute('DELETE FROM xss_sessions');c.execute('DELETE FROM users WHERE is_admin=0')
             generation=secrets.token_hex(16)
             c.execute("UPDATE settings SET value=? WHERE key='generation'",(generation,))
         session['generation']=generation
@@ -230,27 +256,39 @@ def create_app(kind,config=None):
             password=request.form.get('new_password','')
             if not 8<=len(password)<=128 or password!=request.form.get('confirmation'):abort(400,'新密碼需 8–128 字元且確認一致')
             from teacher_password import sync_password,bank_database
-            try: _,generation=sync_password(bank_database(),database(),password)
+            try: portal_generation,generation=sync_password(portal_path(),database(),password)
             except ValueError as error:abort(400,str(error))
             session['generation']=generation
+            session['portal_generation']=portal_generation
             session.pop('token',None)
             flash('各 Lab 的 pony 密碼及 JSON 已同步')
             return redirect('/admin')
         return render_template('password.html')
     @app.post('/logout')
     def logout():
-        verify();session.clear();return redirect('/login')
+        verify()
+        if kind=='xss':revoke_xss_session()
+        with sqlite3.connect(portal_path()) as c:c.execute('DELETE FROM portal_sessions WHERE id=?',(session.get('portal_session'),))
+        session.clear()
+        response=redirect(portal_origin()+'/login')
+        response.delete_cookie('xss_lab_session')
+        return response
     @app.get('/steal')
     def steal():
         if kind!='collector':abort(404)
         with db() as c: c.execute('INSERT INTO captures(content) VALUES (?)',(request.args.get('cookie','')[:10000],))
         return '',204
+    @app.errorhandler(400)
+    @app.errorhandler(403)
+    @app.errorhandler(404)
+    def error_page(error):
+        return render_template('error.html',error=error),error.code
     @app.after_request
     def headers(response):
         response.headers['Cache-Control']='no-store'
         response.headers['X-Content-Type-Options']='nosniff'
+        response.headers['Referrer-Policy']='no-referrer'
         if kind!='xss' or session.get('mode','vulnerable')=='protected':
             response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
-        if kind=='xss' and logged(): response.set_cookie('fake_session','XSS-CLASSROOM-ONLY',httponly=False)
         return response
     return app

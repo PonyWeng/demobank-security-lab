@@ -8,8 +8,8 @@ from bank import create_app
 def app(tmp_path):
     return create_app({'TESTING': True, 'DEFAULT_CSRF_MODE': 'protected', 'SECRET_KEY': 'test-secret-' * 4, 'DATABASE': str(tmp_path / 'bank.sqlite'), 'TRUSTED_HOSTS': ['localhost'], 'LAB_ACCESS_CODE': '', 'SESSION_COOKIE_SECURE': False, 'SESSION_COOKIE_SAMESITE': 'Lax'})
 
-def token(client, page='/'):
-    response = client.get(page)
+def token(client, page='/bank'):
+    response = client.get(page,follow_redirects=True)
     return re.search(r'name="csrf_token" value="([^"]+)"', response.text)[1]
 
 def register(client, name):

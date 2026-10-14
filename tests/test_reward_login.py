@@ -5,6 +5,7 @@ def test_reward_login_flow(tmp_path):
     app = create_app({'TESTING': True, 'DEFAULT_CSRF_MODE': 'protected', 'SECRET_KEY': 'x'*32, 'DATABASE': str(tmp_path/'bank.db'), 'TRUSTED_HOSTS': ['localhost'], 'LAB_ACCESS_CODE': ''})
     client = app.test_client()
     register(client, 'student')
+    client.post('/logout',data={'csrf_token':token(client,'/bank')})
     result = client.post('/transfer?reward=1', data={'recipient':'DBHACKER001','amount':'100'})
     assert result.status_code == 401
     assert '系統將自動跳轉' in result.text

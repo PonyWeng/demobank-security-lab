@@ -20,6 +20,7 @@ fi
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python scripts/bootstrap.py
 .venv/bin/python attacks/bootstrap.py
+.venv/bin/python scripts/migrate_accounts.py
 echo
 echo 'Setup complete. Start all five services: bash start_service.sh'
 echo 'Credentials: instance/setup-credentials.json (keep private).'

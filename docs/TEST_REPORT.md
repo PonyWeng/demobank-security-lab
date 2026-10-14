@@ -1,6 +1,14 @@
 # 實際驗收記錄
 
-## 全頁面與統一入口檢查
+## 2026-10-15：統一課程入口與有效 XSS Session
+
+課程代碼、註冊、登入集中至 5000，登入後 /labs。SQL／XSS／Collector 使用短效、一次性、目標綁定票證，不分教師登入；角色依入口資料庫驗證。SQL 注入移至模擬登入，不會更改平台角色。新增瀏覽器流程：課程代碼 → 註冊 → SQL → XSS → Collector，全程只登入一次。票證過期／重播／目標不符與學生越權被拒絕。
+
+XSS 實際控制留言身分的 xss_lab_session 可在 Vulnerable 被腳本傳到 Collector，再在另一個課程登入瀏覽器替換並冒用留言身分；不能取得平台教師權限。Protected 旋轉 Cookie、設 HttpOnly、編碼與 CSP。實際 Edge 傳送／查看／替換與 Protected 旋轉已驗證。新版全部畫面使用同一 CSS，手機無水平溢出。部署需重跑 setup.sh 執行舊學生的一次性移轉，已有入口帳密／角色與銀行資料保留。
+
+最終完整測試：37 passed（60.40 秒）；Edge 稽核 23 個頁面，含 Cookie 收集、替換身分與 Protected 驗證。
+
+## 以下為舊版歷史驗收（流程已由上方新版取代）
 
 新增瀏覽器逐頁稽核，31 個畫面（銀行、Playground、SQL、XSS、Collector 的登入／註冊／設定／管理／密碼與實驗頁）回應 200；CSS 載入無失敗、無 JavaScript pageerror，390px 無水平溢出。SQL／XSS 登入導覽與錯誤訊息移入卡片，學生／教師入口有清楚區別。桌面與手機截圖存於 test-results/page-audit（不提交 Git）。統一入口銀行 /labs 顯示各站登入／註冊連結，保留各實驗原風格。
 

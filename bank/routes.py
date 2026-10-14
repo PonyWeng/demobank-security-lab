@@ -17,7 +17,8 @@ def login_required(fn):
         with connect() as db:
             generation = db.execute("SELECT value FROM metadata WHERE key='generation'").fetchone()['value']
             user = db.execute('SELECT id FROM users WHERE id=?', (session.get('uid'),)).fetchone()
-        if not user or session.get('generation') != generation:
+            portal_valid=not session.get('portal_session') or db.execute('SELECT 1 FROM portal_sessions WHERE id=? AND user_id=?',(session.get('portal_session'),session.get('uid'))).fetchone()
+        if not user or not portal_valid or session.get('generation') != generation:
             if session.get('uid') is not None:
                 session.clear()
             if request.endpoint == 'bank.transfer':
@@ -58,14 +59,30 @@ def register():
                 with connect() as db:
                     uid = db.execute('INSERT INTO users(username,password_hash) VALUES (?,?)', (name, generate_password_hash(password))).lastrowid
                     db.execute('INSERT INTO accounts(user_id,number,balance) VALUES (?,?,500000)', (uid, 'DB' + secrets.token_hex(6).upper()))
-                flash('註冊完成，已存入 NT$5,000')
-                return redirect(url_for('bank.login'))
+                gate_ok=session.get('gate',False)
+                session.clear()
+                from portal_auth import create_login
+                with connect() as db:
+                    generation=db.execute("SELECT value FROM metadata WHERE key='generation'").fetchone()['value']
+                    identifier=create_login(db,uid)
+                session.update(uid=uid,generation=generation,gate=gate_ok,portal_session=identifier)
+                flash('註冊完成，已存入 NT$5,000；請選擇 Lab。')
+                return redirect(url_for('bank.lab_hub'))
             except sqlite3.IntegrityError:
                 flash('帳號已存在，請使用其他名稱')
     return render_template('auth.html', kind='register')
 
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.method=='GET' and session.get('uid'):
+        with connect() as db:
+            user=db.execute('SELECT id FROM users WHERE id=?',(session['uid'],)).fetchone()
+            generation=db.execute("SELECT value FROM metadata WHERE key='generation'").fetchone()['value']
+            portal_valid=not session.get('portal_session') or db.execute('SELECT 1 FROM portal_sessions WHERE id=? AND user_id=?',(session['portal_session'],session['uid'])).fetchone()
+        if user and portal_valid and session.get('generation')==generation:
+            return redirect(url_for('bank.reward_return' if request.args.get('reward')=='1' else 'bank.lab_hub'))
+        gate_ok=session.get('gate',False)
+        session.clear();session['gate']=gate_ok
     if request.method == 'POST':
         verify_token()
         with connect() as db:
@@ -75,9 +92,11 @@ def login():
             gate_ok = session.get('gate', False)
             session.clear()
             session.update(uid=user['id'], generation=generation, gate=gate_ok)
+            from portal_auth import create_login
+            with connect() as db:session['portal_session']=create_login(db,user['id'])
             if request.args.get('reward') == '1':
                 return redirect(url_for('bank.reward_return'))
-            return redirect(url_for('bank.dashboard'))
+            return redirect(url_for('bank.lab_hub'))
         flash('帳號或密碼不正確')
     if request.method == 'GET' and request.args.get('reward') == '1':
         flash('尚未登入或此次請求未帶登入 Cookie。請先登入 DemoBank，再回活動頁按一次「領取活動獎勵」。')
@@ -87,6 +106,7 @@ def login():
 @login_required
 def logout():
     verify_token()
+    with connect() as db:db.execute('DELETE FROM portal_sessions WHERE id=?',(session.get('portal_session'),))
     session.clear()
     return redirect(url_for('bank.login'))
 
@@ -109,7 +129,7 @@ def account_data():
         history = db.execute('SELECT t.*, s.number AS sender_number, r.number AS recipient_number FROM transfers t JOIN accounts s ON s.id=t.sender JOIN accounts r ON r.id=t.recipient WHERE t.sender=? OR t.recipient=? ORDER BY t.id DESC LIMIT 100', (account['id'], account['id'])).fetchall()
     return account, history
 
-@bp.get('/')
+@bp.get('/bank')
 @login_required
 def dashboard():
     account, history = account_data()
@@ -122,11 +142,27 @@ def api_account():
     return jsonify(account=dict(account), transactions=[dict(t) for t in history])
 
 @bp.get('/labs')
+@login_required
 def lab_hub():
     from .endpoints import endpoints
     from attacks.lab import urls,initialize
     initialize()
     return render_template('lab_hub.html',bank_urls=endpoints(),attack_urls=urls())
+
+@bp.get('/')
+def home():
+    return redirect(url_for('bank.lab_hub'))
+
+@bp.get('/labs/enter/<kind>')
+@login_required
+def enter_lab(kind):
+    from portal_auth import issue
+    from attacks.lab import urls,initialize
+    if kind not in ('sql','xss','collector'):abort(404)
+    initialize()
+    ticket,identifier=issue(current_app.config['DATABASE'],session['uid'],kind,session.get('portal_session'))
+    session['portal_session']=identifier
+    return redirect(urls()[kind]+'/auth/entry?ticket='+ticket)
 
 @bp.post('/transfer')
 @login_required

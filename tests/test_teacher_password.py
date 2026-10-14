@@ -33,7 +33,10 @@ def test_ui_password_sync(tmp_path,monkeypatch):
     attack_client=attack.test_client()
     def attack_token(path):
         return re.search('name="csrf_token"[^>]*value="([^"]+)"',attack_client.get(path).text)[1]
-    assert attack_client.post('/teacher/login',data={'csrf_token':attack_token('/teacher/login'),'username':'pony','password':'new-teacher-123'}).status_code==302
+    from portal_auth import issue
+    with sqlite3.connect(bank_path) as db:uid=db.execute("SELECT id FROM users WHERE username='pony'").fetchone()[0]
+    ticket,_=issue(bank_path,uid,'sql')
+    assert attack_client.get('/auth/entry?ticket='+ticket).status_code==302
     assert attack_client.post('/password',data={'csrf_token':attack_token('/password'),'old_password':'new-teacher-123','new_password':'final-teacher-123','confirmation':'final-teacher-123'}).status_code==302
     for path in (bank_path,attack_path):
         with sqlite3.connect(path) as db:assert check_password_hash(db.execute('SELECT password_hash FROM users WHERE username=?',('pony',)).fetchone()[0],'final-teacher-123')

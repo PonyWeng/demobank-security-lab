@@ -39,6 +39,8 @@ def init_db():
     with connect() as db:
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript(SCHEMA)
+        from portal_auth import initialize
+        initialize(db)
         if 'is_admin' not in {row['name'] for row in db.execute('PRAGMA table_info(users)')}:
             db.execute('ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0 CHECK(is_admin IN (0,1))')
         db.execute("INSERT OR IGNORE INTO metadata VALUES ('generation', ?)", (secrets.token_hex(16),))
