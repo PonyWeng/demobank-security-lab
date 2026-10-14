@@ -309,6 +309,14 @@ def create_app(kind,config=None):
             owner=c.execute("SELECT username FROM xss_sessions WHERE hash=? AND expires>? AND generation=(SELECT value FROM settings WHERE key='generation')",(hashlib.sha256(value.encode()).hexdigest(),int(time.time()))).fetchone()
             c.execute('INSERT INTO captures(content,username) VALUES (?,?)',(content,owner['username'] if owner else ''))
         return '',204
+    @app.post('/admin/clear_captures')
+    def clear_captures():
+        if kind!='collector':abort(404)
+        teacher();verify()
+        if session['username']!='pony':abort(403)
+        with db() as c:c.execute('DELETE FROM captures')
+        flash('Collector 紀錄已清空')
+        return redirect('/')
     @app.errorhandler(400)
     @app.errorhandler(403)
     @app.errorhandler(404)

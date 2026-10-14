@@ -81,6 +81,19 @@ def test_endpoints_and_collector(apps):
     assert 'fake_session=CLASSROOM' not in collector.get('/').text
     assert collector.get('/admin').status_code==403
 
+def test_collector_clear_requires_pony_and_csrf(apps):
+    c=apps['collector'].test_client()
+    c.get('/steal?cookie=xss_lab_session=test')
+    login(c,'alice')
+    assert '清空 Collector 紀錄' not in c.get('/').text
+    assert c.post('/admin/clear_captures',data={'csrf_token':token(c)}).status_code==403
+    with lab.db() as db:assert db.execute('SELECT count(*) FROM captures').fetchone()[0]==1
+    login(c,'pony')
+    assert '清空 Collector 紀錄' in c.get('/').text
+    assert c.post('/admin/clear_captures').status_code==403
+    assert c.post('/admin/clear_captures',data={'csrf_token':token(c)}).status_code==302
+    with lab.db() as db:assert db.execute('SELECT count(*) FROM captures').fetchone()[0]==0
+
 def test_features_preserved(apps):
     sql=apps['sql'].test_client();login(sql,'pony')
     assert 'Table: users' in sql.get('/').text
