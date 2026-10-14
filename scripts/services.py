@@ -5,6 +5,24 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 STATE=ROOT/'instance/services'
 PORTS=[5000,5001,5100,5101,5102]
+sys.path.insert(0,str(ROOT))
+
+def configure_tunnels(records,timeout=45):
+    from scripts.tunnel_endpoints import read_urls,apply_urls
+    if len(records)!=5 or not all(alive(r) for r in records):
+        raise RuntimeError('Five managed tunnels must be running; stop and start tunnels again.')
+    deadline=time.monotonic()+timeout
+    while True:
+        urls=read_urls(STATE)
+        if len(urls)==5:
+            apply_urls(ROOT,urls)
+            print('All five public endpoints applied automatically. CSRF HTTPS cross-site cookie enabled.',flush=True)
+            print_urls()
+            print('Students must log in again at the new public bank URL.')
+            return
+        if not all(alive(r) for r in records):raise RuntimeError('A tunnel exited; inspect logs and restart tunnels. Existing settings preserved.')
+        if time.monotonic()>=deadline:raise RuntimeError('URLs not ready; tunnels remain running. Retry: bash cloudflared.sh apply')
+        time.sleep(.5)
 
 def identity(pid):
     try:
@@ -55,9 +73,11 @@ def main():
         elif action=='status':
             print('Services: '+('running' if records and all(alive(r) for r in records) else 'stopped'))
         elif action=='tunnels-urls':print_urls()
+        elif action=='tunnels-apply':configure_tunnels(records)
         elif action in ('start','tunnels-start'):
             if any(alive(r) for r in records):
-                print('Already running; stop before restarting.')
+                if tunnel:configure_tunnels(records)
+                else:print('Already running; stop before restarting.')
                 return
             created=[]
             try:
@@ -78,7 +98,8 @@ def main():
             except Exception:
                 stop_records(created)
                 raise
-            print('Started '+('five tunnels; use bash cloudflared.sh urls after URLs appear' if tunnel else 'all five services; hub: http://localhost:5000/labs'))
+            print('Started '+('five tunnels; waiting for public URLs...' if tunnel else 'all five services; hub: http://localhost:5000/labs'),flush=True)
+            if tunnel:configure_tunnels(created)
         else:raise RuntimeError('Unknown action')
 
 def print_urls():

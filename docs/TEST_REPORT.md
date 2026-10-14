@@ -1,5 +1,9 @@
 # 實際驗收記錄
 
+## Tunnel 端點自動化
+
+新增五條 Quick Tunnel 日誌解析與兩套 SQLite 端點同步，start 自動等待與套用，apply 可重試。2 項測試通過：完整映射、拒絕缺少／錯誤 URL 且保留設定，以及第二個資料庫失敗時回滾第一個。尚未在 Ubuntu 啟動真實 cloudflared 驗收。
+
 ## 統一教師帳密與 UI 修改
 
 首次 pony / ponypony、alice / alice001、bob / bob00100，銀行 demo_hacker / hacker001；既有資料保留。25 項後端測試通過。新增測試分別從銀行與 SQL 教師介面修改密碼，確認兩個資料庫雜湊、兩份 JSON 同步、錯誤舊密碼與缺少 Token 拒絕，以及其他網站的舊登入失效。README 已重整為合併版唯一完整操作說明。

@@ -10,7 +10,7 @@ bash cloudflared.sh start
 bash cloudflared.sh urls
 ```
 
-setup.sh 不重設現有 .env、帳號或餘額，不自動啟動網站。需自行安裝官方 cloudflared；Tunnel URL 產生需要數秒，urls 可重跑。Windows 直接 `python -m pip install -r requirements.txt`、`python scripts/bootstrap.py`、`python attacks/bootstrap.py`、`python run_all.py`。
+setup.sh 不重設現有 .env、帳號或餘額，不自動啟動網站。需自行安裝官方 cloudflared；Tunnel start 等待五個 URL 並自動套用兩套資料庫端點及 CSRF None+Secure Cookie。超時後 Tunnel 保持運作，可用 `bash cloudflared.sh apply` 重試。Windows 直接 `python -m pip install -r requirements.txt`、`python scripts/bootstrap.py`、`python attacks/bootstrap.py`、`python run_all.py`。
 
 |服務|Port|
 |---|---|
@@ -31,7 +31,7 @@ bash stop_service.sh
 
 只停止本腳本建立的程序；不會掃 Port 殺程序，不會 pkill 所有 cloudflared。若 Port 被既有 run.py 佔用，start 會拒絕，請自己回到舊終端按 Ctrl+C。先前手動啟動的 Tunnel 也不會被新腳本停止。
 
-公開端點分兩套設定：銀行 pony 管理中心設定 5000/5001；SQL Lab 的 `/teacher/login` 使用 pony / ponypony 登入，管理頁設定 5100/5101/5102。初次透過 SSH port forwarding 訪問本機管理頁，設定好公開 hostname 才接受外部請求。Lab 總覽會讀兩套已儲存端點，不需重新啟動 Python。
+本專案 cloudflared.sh 現在自動設定全部公開端點，Lab 總覽會立即更新。手動啟动 Tunnel 才需要自行到兩套管理中心設定；教師入口 /teacher/login，各站需分別登入。Collector 首頁限教師，未登入會顯示 Forbidden，先訪問 Collector 的 /teacher/login 即可。
 
 CSRF 帳號與密碼沿用先前設定，首次資料記錄在 instance/setup-credentials.json；Attacks 首次教師帳密 pony / ponypony、alice / alice001、bob / bob00100，記錄於 attacks/instance/setup-credentials.json。不共用 Session 或資料庫。Attacks 的 .env 在 attacks/.env，不能指向銀行資料庫。
 

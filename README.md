@@ -71,9 +71,9 @@ bash cloudflared.sh urls
 bash cloudflared.sh stop
 ```
 
-此腳本啟動五條 Quick Tunnel；URL 產生需數秒，urls 可重跑。停止只處理本腳本的 Tunnel，保留其他專案連線。各日誌在 instance/services/tunnel-PORT.log。
+此腳本啟動五條 Quick Tunnel，等待最多 45 秒取得網址後，自動寫入銀行與 Attacks 的五個端點，並啟用 CSRF HTTPS 跨 Site Cookie。成功會顯示「All five public endpoints applied automatically」，不需手動貼設定或重啟網站。網址若尚未產生，Tunnel 保持運作，可執行 `bash cloudflared.sh apply` 重試；五個網址未齊全或格式錯誤時不覆寫原設定。urls 只顯示網址。停止只處理本腳本的 Tunnel，保留其他專案連線。各日誌在 instance/services/tunnel-PORT.log。
 
-首次以 SSH port forwarding 訪問本機管理頁：銀行管理中心填 5000/5001 的 HTTPS origin；SQL `/teacher/login` → 管理中心填 5100/5101/5102。只填 `https://主機`，不含路徑。端點儲存 SQLite 後立即生效，優先於 .env；網址未設定時外部請求可能 400，包括 CSS。初次也可在銀行 .env 的 BANK_HOSTS 加入銀行 Tunnel hostname，再重啟登入管理頁。
+如果不用本專案的 Tunnel 腳本、而是手動執行 cloudflared，才需要以 SSH port forwarding 訪問管理頁：銀行設定 5000/5001；SQL `/teacher/login` → 管理中心設定 5100/5101/5102。只填 `https://主機`，不含路徑。端點儲存 SQLite 後立即生效，優先於 .env。新網址自動套用後，學生仍需在新的公開銀行登入。
 
 CSRF 公開跨 Site Demo 勾選銀行管理頁的「HTTPS 跨 Site Demo：None + Secure」，並在公開銀行重新登入。切勿只登入 localhost 再操作公網活動站。普通 Quick Tunnel 不等於學生授權機制；設定課程門禁及可用的學生存取限制。GCP 不開公網 5000/5001/5100/5101/5102；課程結束停 Tunnel。
 
