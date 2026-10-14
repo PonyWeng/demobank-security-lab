@@ -109,7 +109,7 @@ def create_app(kind,config=None):
     @app.route('/',methods=['GET','POST'])
     def index():
         if kind=='collector':
-            teacher()
+            if not logged():return redirect('/login')
             with db() as c: rows=c.execute('SELECT * FROM captures ORDER BY id DESC LIMIT 100').fetchall()
             return render_template('collector.html',rows=rows)
         if not logged(): return redirect('/login')

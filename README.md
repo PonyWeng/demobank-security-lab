@@ -85,7 +85,7 @@ CSRF 公開跨 Site Demo 勾選銀行管理頁的「HTTPS 跨 Site Demo：None +
 
 SQL 登入後保留原本深色「Database Structure & Data」頁，可查看教學 users、messages、captures 的欄位及最多 100 筆資料。以正確 pony 帳密登入，可按 Add new User 建立使用者與指定角色，密碼儲存雜湊；設定資料表不公開。XSS 恢復原版白色留言板與全寬留言框、原版登入／註冊畫面，保留自己的留言刪除与教師清空留言功能。
 
-**XSS**：登入留言板發表 `<script>alert('XSS Demo')</script>`；Vulnerable 不安全輸出會執行，Protected 以文字顯示並加入 CSP。Collector 僅用於本課程 fake_session 假標記，查看紀錄需教師登入；真正登入 Cookie 一直維持 HttpOnly。
+**XSS**：登入留言板發表 `<script>alert('XSS Demo')</script>`；Vulnerable 不安全輸出會執行，Protected 以文字顯示並加入 CSP。Collector 僅用於本課程 fake_session 假標記，查看紀錄需在 Collector 登入（學生也可）；真正登入 Cookie 一直維持 HttpOnly。
 
 各設定頁顯示改了什麼、加在哪個檔案與函式。銀行管理中心可查看所有餘額及學生；Attacks 管理中心可查看帳號與端點。重置要輸入 RESET 並驗證 Token；銀行重置不影響 XSS，Attacks 重置不影響銀行。CSRF 重置保留教師與駭客帳密，餘額恢復 NT$5,000。
 

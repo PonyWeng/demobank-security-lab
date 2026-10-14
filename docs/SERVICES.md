@@ -31,7 +31,7 @@ bash stop_service.sh
 
 只停止本腳本建立的程序；不會掃 Port 殺程序，不會 pkill 所有 cloudflared。若 Port 被既有 run.py 佔用，start 會拒絕，請自己回到舊終端按 Ctrl+C。先前手動啟動的 Tunnel 也不會被新腳本停止。
 
-本專案 cloudflared.sh 現在自動設定全部公開端點，Lab 總覽會立即更新。手動啟动 Tunnel 才需要自行到兩套管理中心設定；教師入口 /teacher/login，各站需分別登入。Collector 首頁限教師，未登入會顯示 Forbidden，先訪問 Collector 的 /teacher/login 即可。
+本專案 cloudflared.sh 現在自動設定全部公開端點，Lab 總覽會立即更新。手動啟动 Tunnel 才需要自行到兩套管理中心設定；教師入口 /teacher/login，各站需分別登入。Collector 首頁開放已登入學生與教師；未登入自動前往 /login，各站仍需分別登入。
 
 CSRF 帳號與密碼沿用先前設定，首次資料記錄在 instance/setup-credentials.json；Attacks 首次教師帳密 pony / ponypony、alice / alice001、bob / bob00100，記錄於 attacks/instance/setup-credentials.json。不共用 Session 或資料庫。Attacks 的 .env 在 attacks/.env，不能指向銀行資料庫。
 

