@@ -139,8 +139,14 @@ def create_app(kind,config=None):
             with db() as c:
                 tables=[]
                 for name in ('users','messages','captures'):
-                    columns=c.execute(f'PRAGMA table_info({name})').fetchall()
-                    data=c.execute(f'SELECT * FROM {name} LIMIT 100').fetchall()
+                    if name=='users':
+                        from attacks.sql_demo import connect as demo_connect
+                        with demo_connect(database().with_suffix('.sql-demo.sqlite')) as demo:
+                            columns=[(0,'id','INTEGER',0,None,1),(1,'username','TEXT',0,None,0),(2,'password','TEXT',0,None,0),(3,'isAdmin','INTEGER',0,None,0)]
+                            data=demo.execute('SELECT * FROM users LIMIT 100').fetchall()
+                    else:
+                        columns=c.execute(f'PRAGMA table_info({name})').fetchall()
+                        data=c.execute(f'SELECT * FROM {name} LIMIT 100').fetchall()
                     tables.append({'table':name,'columns':columns,'rows':data})
             return render_template('sql_index.html',db_info=tables,user=session['username'])
         if request.method=='POST':
@@ -159,18 +165,24 @@ def create_app(kind,config=None):
         if request.method=='POST':
             verify()
             name=request.form.get('username','');password=request.form.get('password','')
-            with db() as c:
-                real=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
-                valid=bool(real and check_password_hash(real['password_hash'],password))
-                if session.get('mode','vulnerable')=='vulnerable':
-                    query=f"SELECT * FROM users WHERE username='{name}' AND 1={int(valid)}"
-                    try: row=c.execute(query).fetchone()
-                    except sqlite3.Error:row=None
-                else:
-                    query='SELECT * FROM users WHERE username=? (參數化，再驗證密碼雜湊)'
-                    row=real if valid else None
-            result='模擬登入成功：'+row['username'] if row else '模擬登入失敗'
+            from attacks.sql_demo import connect as demo_connect, login as demo_login
+            with demo_connect(database().with_suffix('.sql-demo.sqlite')) as c:
+                try:
+                    row,query=demo_login(c,name,password,session.get('mode','vulnerable')=='protected')
+                    result=('模擬登入成功：'+row['username']+' · '+('假管理員' if row['isAdmin'] else '一般示範帳號')) if row else '模擬登入失敗（請回資料表查看異動）'
+                except sqlite3.Error as error:
+                    c.rollback()
+                    result='SQL 錯誤：'+str(error)
         return render_template('simulate_login.html',result=result,query=query)
+    @app.post('/simulate/reset')
+    def reset_sql_demo():
+        if kind!='sql':abort(404)
+        teacher();verify()
+        from attacks.sql_demo import connect as demo_connect
+        with demo_connect(database().with_suffix('.sql-demo.sqlite')) as c:
+            c.execute('DELETE FROM users')
+            c.executemany('INSERT INTO users(username,password,isAdmin) VALUES (?,?,?)',[('ADMIN','admin001',1),('pony','demo001',0),('student','student001',0)])
+        return redirect('/')
     @app.post('/delete_message/<int:msg_id>')
     def delete_message(msg_id):
         if kind!='xss':abort(404)

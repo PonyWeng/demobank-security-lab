@@ -75,7 +75,7 @@ Quick Tunnel URL 改變後，學生從新的 5000 入口重新登入。GCP 不�
 
 ## SQL Injection
 
-學生已登入平台後進入 SQL，可查看 users / messages / captures 的結構與最多 100 筆資料。點「開啟模擬登入」進入 /simulate/login，Username 輸入 `' OR 1=1 -- `、密碼任意：Vulnerable 可繞過，Protected 拒絕。**模擬結果不影響平台身分或教師權限**。教師仍可新增課程使用者，正常功能永遠參數化並儲存密碼雜湊。
+學生已登入平台後進入 SQL，可查看資料表。users 是獨立的虛構示範資料，包含假管理員 ADMIN／admin001，以及普通示範 pony／demo001。點「開啟模擬登入」可複製登入繞過、新增、刪除、升權四種 Payload，Vulnerable 允許多段 SQL，Protected 使用參數化查詢。教師可重置示範資料。詳細操作見 [SQL Payload 教學](docs/SQL_PAYLOADS.md)。**實驗不影響真實平台 pony 或教師權限**。教師仍可新增課程使用者，正常功能永遠參數化並儲存密碼雜湊。
 
 ## XSS 與真正的實驗 Session
 
