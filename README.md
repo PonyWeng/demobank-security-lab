@@ -1,5 +1,7 @@
 # DemoBank Web Security Training Lab
 
+Ubuntu VM 一鍵設定：clone 後執行 `bash setup.sh`，再用 `cat instance/setup-credentials.json` 查看首次建立的帳號密碼及課程代碼；執行 `.venv/bin/python run.py` 啟動。腳本自動建立 .env 與 pony 管理員、alice、bob、demo_hacker，重跑保留現有資料。詳見 [VM_SETUP.md](docs/VM_SETUP.md)。
+
 目前 Playground 已移除所有 Payload 輸入、編輯與複製介面。下方僅有預設收合的唯讀教學說明；學生以 F12 → Elements → reward-form 修改 recipient／amount 的 hidden input value，再按領取按鈕。重新整理恢復固定駭客帳號與 NT$100。下文較早的編輯器操作以此最新流程為準。
 
 Python Flask / SQLite / HTML / CSS / JavaScript 的完整本機教學銀行。所有金額為虛構，不連接金融服務。轉帳使用整數分與原子交易；密碼以 Werkzeug scrypt 雜湊；銀行 SQL 全部參數化。只有 `/transfer` 的 CSRF 驗證可刻意關閉。帳戶 API 只查詢登入者，無任意使用者 id 讀取介面。

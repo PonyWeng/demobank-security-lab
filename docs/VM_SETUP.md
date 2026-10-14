@@ -1,5 +1,19 @@
 # Ubuntu VM 直接執行（不使用 Docker）
 
+## 一鍵安裝（建議）
+
+clone 並進入專案後：
+
+```bash
+bash setup.sh
+cat instance/setup-credentials.json
+.venv/bin/python run.py
+```
+
+setup.sh 自動安裝所需 Python 套件、建立 .venv、建立 .env 隨機 Secret 與課程代碼、建立 pony 管理員與 alice/bob 學生帳號，以及可登入的 demo_hacker。每個初始帳戶 NT$5,000；密碼皆為隨機，保存在權限 600 的 instance/setup-credentials.json，僅教師查看。學生使用課程代碼與自行註冊的帳號，勿分享 pony 密碼。
+
+以一般 VM 使用者執行，安裝 OS 套件時可能要求 sudo。重跑不覆寫已有 .env、密碼、角色與餘額；若既有 pony 非管理員則停止，不會自動升權。已有資料庫的駭客密碼不變。建立後不自動啟動 server，啟動指令如上。下方為手動安裝替代流程，不需再重做。
+
 ```bash
 sudo apt update
 sudo apt install -y git gh python3 python3-venv
