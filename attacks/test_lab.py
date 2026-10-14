@@ -78,7 +78,7 @@ def test_endpoints_and_collector(apps):
     assert collector.get('/').status_code==302
     assert collector.get('/steal?cookie=fake_session=CLASSROOM').status_code==204
     login(collector)
-    assert 'fake_session=CLASSROOM' in collector.get('/').text
+    assert 'fake_session=CLASSROOM' not in collector.get('/').text
     assert collector.get('/admin').status_code==403
 
 def test_features_preserved(apps):

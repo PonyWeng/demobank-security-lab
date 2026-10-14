@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY,username TEXT,content
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT);
 CREATE TABLE IF NOT EXISTS captures(id INTEGER PRIMARY KEY,content TEXT,created TEXT DEFAULT CURRENT_TIMESTAMP);''')
         c.execute('CREATE TABLE IF NOT EXISTS xss_sessions(hash TEXT PRIMARY KEY,username TEXT NOT NULL,generation TEXT NOT NULL,expires INTEGER NOT NULL)')
+        if 'username' not in {r['name'] for r in c.execute('PRAGMA table_info(captures)')}:
+            c.execute("ALTER TABLE captures ADD COLUMN username TEXT NOT NULL DEFAULT ''")
         c.execute("INSERT OR IGNORE INTO settings VALUES ('generation',?)",(secrets.token_hex(16),))
 
 def urls():
@@ -298,7 +300,14 @@ def create_app(kind,config=None):
     @app.get('/steal')
     def steal():
         if kind!='collector':abort(404)
-        with db() as c: c.execute('INSERT INTO captures(content) VALUES (?)',(request.args.get('cookie','')[:10000],))
+        import hashlib,time
+        content=request.args.get('cookie','')[:10000]
+        cookies=[item.strip() for item in content.split(';') if item.strip().startswith('xss_lab_session=')]
+        content=cookies[0] if cookies else '; '.join(item.strip() for item in content.split(';') if not item.strip().startswith('fake_session='))
+        with db() as c:
+            value=cookies[0].split('=',1)[1] if cookies else ''
+            owner=c.execute("SELECT username FROM xss_sessions WHERE hash=? AND expires>? AND generation=(SELECT value FROM settings WHERE key='generation')",(hashlib.sha256(value.encode()).hexdigest(),int(time.time()))).fetchone()
+            c.execute('INSERT INTO captures(content,username) VALUES (?,?)',(content,owner['username'] if owner else ''))
         return '',204
     @app.errorhandler(400)
     @app.errorhandler(403)
@@ -307,6 +316,7 @@ def create_app(kind,config=None):
         return render_template('error.html',error=error),error.code
     @app.after_request
     def headers(response):
+        if kind=='xss':response.delete_cookie('fake_session')
         response.headers['Cache-Control']='no-store'
         response.headers['X-Content-Type-Options']='nosniff'
         response.headers['Referrer-Policy']='no-referrer'
