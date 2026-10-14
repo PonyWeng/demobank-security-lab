@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title>學生註冊</title>
     <link rel="stylesheet" href="/static/xss_register.css">
 </head>
@@ -34,15 +34,9 @@
         <div class="login-link">
             已經有帳號？ <a href="/login">登入</a>
         </div>
-    </div>
+    <div class="login-link"><a href="{{ hub_url }}">Lab 總覽</a></div>{% for text in get_flashed_messages() %}<p role="status">{{ text }}</p>{% endfor %}</div>
 
-    {% if redirect_login %}
-    <script>
-        setTimeout(() => {
-            window.location.href = "/login";
-        }, 2000);  // 2 秒後跳轉
-    </script>
-    {% endif %}
+    
 {% include 'original_footer.html' %}
-{% for text in get_flashed_messages() %}<p>{{ text }}</p>{% endfor %}</body>
+</body>
 </html>

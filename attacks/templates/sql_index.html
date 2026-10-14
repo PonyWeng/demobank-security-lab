@@ -12,7 +12,7 @@
     <!-- 🔥 Logout Button -->
     <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ token() }}"><button class="logout-btn">Logout</button></form>
 
-    <h1>Database Structure & Data</h1><div class="lab-links"><a href="/security">更改安全設定（{{ mode }}）</a><a href="/teacher/login">教師登入</a>{% if teacher %}<a href="/admin">管理中心</a>{% endif %}</div>
+    <h1>Database Structure & Data</h1><div class="lab-links"><a href="{{ hub_url }}">Lab 總覽</a><a href="/security">更改安全設定（{{ mode }}）</a><a href="/teacher/login">教師登入</a>{% if teacher %}<a href="/admin">管理中心</a>{% endif %}</div>
 
     <!-- User Info -->
     <div class="userinfo-box">

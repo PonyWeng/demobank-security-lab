@@ -14,6 +14,8 @@ Flask、SQLite、HTML/CSS/JavaScript 的大學資安教學靶機，包含 CSRF�
 
 服務使用 Waitress，只監聽 127.0.0.1，不開 Flask Debugger。不需要 Docker。
 
+學生統一入口：銀行公開網址加 `/labs`。入口提供銀行、SQL、XSS、Collector 的學生登入／註冊與教師登入，各頁導覽可回「Lab 總覽」。這是統一選單，不是跨站共用 Session；學生選擇 Lab 後在該站登入。
+
 ## Ubuntu / GCP VM
 
 私人儲存庫首次 clone，請先以 GitHub CLI 或 SSH key 登入 PonyWeng：

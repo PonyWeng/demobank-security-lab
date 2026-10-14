@@ -55,7 +55,13 @@ def create_app(kind,config=None):
         if not u or not u['is_admin']: abort(403)
     @app.context_processor
     def helpers():
-        return dict(kind=kind,token=token,urls=urls(),mode=session.get('mode','vulnerable'),teacher=bool(logged() and session.get('teacher')))
+        from teacher_password import bank_database
+        hub='http://bank.localhost:5000/labs'
+        if bank_database().exists():
+            with sqlite3.connect(bank_database()) as c:
+                row=c.execute("SELECT value FROM metadata WHERE key='public_endpoints'").fetchone()
+            if row:hub=json.loads(row[0])['bank']+'/labs'
+        return dict(kind=kind,token=token,hub_url=hub,urls=urls(),mode=session.get('mode','vulnerable'),teacher=bool(logged() and session.get('teacher')))
     @app.before_request
     def gate():
         host=request.host.split(':')[0]
