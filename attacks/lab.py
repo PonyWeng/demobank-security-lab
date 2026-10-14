@@ -37,6 +37,8 @@ def urls():
 def create_app(kind,config=None):
     initialize()
     app=Flask(__name__)
+    from lab_time import taipei_time
+    app.jinja_env.filters['taipei_time'] = taipei_time
     app.config.update(SECRET_KEY=config_value('SECRET_KEY'),SESSION_COOKIE_NAME=f'attacks_{kind}',SESSION_COOKIE_HTTPONLY=True,SESSION_COOKIE_SAMESITE=config_value('COOKIE_SAMESITE','Lax'),SESSION_COOKIE_SECURE=config_value('COOKIE_SECURE','false')=='true')
     if config: app.config.update(config)
     if not app.secret_key or len(app.secret_key)<32: raise RuntimeError('Run setup first to create SECRET_KEY')

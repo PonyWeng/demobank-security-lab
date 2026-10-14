@@ -89,7 +89,8 @@ def register_cli(app):
             rows = db.execute('SELECT t.amount,t.created_at,a.number FROM transfers t JOIN accounts a ON a.id=t.sender WHERE t.recipient=? ORDER BY t.id DESC LIMIT 20', (account['id'],)).fetchall()
         click.echo(f'{HACKER_ACCOUNT}: NT${account["balance"] / 100:,.2f}')
         for row in rows:
-            click.echo(f'{row["created_at"]} | {row["number"]} | +NT${row["amount"] / 100:,.2f}')
+            from lab_time import taipei_time
+            click.echo(f'{taipei_time(row["created_at"])} | {row["number"]} | +NT${row["amount"] / 100:,.2f}')
     @app.cli.command('seed-lab')
     @click.option('--password', prompt=True, hide_input=True, confirmation_prompt=True)
     def seed(password):

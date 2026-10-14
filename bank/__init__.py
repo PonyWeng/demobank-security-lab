@@ -10,6 +10,8 @@ from .routes import bp
 def create_app(config=None):
     load_dotenv()
     app = Flask(__name__)
+    from lab_time import taipei_time
+    app.jinja_env.filters['taipei_time'] = taipei_time
     app.config.from_mapping(
         SECRET_KEY=os.getenv('SECRET_KEY'),
         DATABASE=os.getenv('DATABASE', 'instance/demobank.sqlite'),
