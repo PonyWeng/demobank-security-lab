@@ -121,6 +121,13 @@ def api_account():
     account, history = account_data()
     return jsonify(account=dict(account), transactions=[dict(t) for t in history])
 
+@bp.get('/labs')
+def lab_hub():
+    from .endpoints import endpoints
+    from attacks.lab import urls,initialize
+    initialize()
+    return render_template('lab_hub.html',bank_urls=endpoints(),attack_urls=urls())
+
 @bp.post('/transfer')
 @login_required
 def transfer():

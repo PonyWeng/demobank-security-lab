@@ -1,5 +1,7 @@
 # Ubuntu VM 直接執行（不使用 Docker）
 
+合併版請使用 `bash setup.sh`、`bash start_service.sh`、`bash cloudflared.sh start`，完整操作見 [SERVICES.md](SERVICES.md)。下方 run.py 指令僅啟動 CSRF；新 launcher 會啟動全部五個端點。
+
 ## 一鍵安裝（建議）
 
 clone 並進入專案後：

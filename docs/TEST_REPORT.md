@@ -1,5 +1,9 @@
 # 實際驗收記錄
 
+## 合併版服務
+
+CSRF + SQL Injection + XSS 合併到同一 repo；24 項後端測試通過。以 run_all.py --port-offset 200 實際啟動五個服務，各自 HTTP 200。四個 Shell 腳本 Bash 語法檢查通過。SQL／XSS 另已在 Edge 實測登入繞過、Protected 拒絕、腳本執行、編碼與 CSP，以及 Collector 回應。背景服務腳本依賴 Linux /proc，尚未在 Ubuntu 實際啟停或建立公網 Tunnel；本機沒有因此對外發布新網站。機密檔案及兩套資料庫均由 gitignore 排除。
+
 ## 收合與未登入領獎流程
 
 完整測試 19 項通過（25.79s）：下方工具預設收合、點擊展開仍可操作；未登入的活動表單 303 至銀行登入提示頁，登入後回固定活動網址，不自動扣款。Protected 仍拒絕。普通 transfer 保留 401，未接受使用者指定的任意返回 URL。

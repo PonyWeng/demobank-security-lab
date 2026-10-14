@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<h1>XSS Demo Collector</h1><p>只收集授權課程的虛構標記，不收集真實網站登入資料。</p>{% for row in rows %}<section class="panel"><span>{{ row.created }}</span><pre>{{ row.content }}</pre></section>{% endfor %}{% endblock %}

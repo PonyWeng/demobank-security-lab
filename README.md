@@ -1,5 +1,9 @@
 # DemoBank Web Security Training Lab
 
+## 合併版：CSRF / SQL Injection / XSS
+
+現在一份 repo 包含三種實驗，資料庫／登入隔離。Ubuntu：`bash setup.sh` → `bash start_service.sh` → `bash cloudflared.sh start` → `bash cloudflared.sh urls`。停止：`bash cloudflared.sh stop`、`bash stop_service.sh`。統一入口 http://localhost:5000/labs。完整 Port、教師端點設定與 Windows 操作見 [SERVICES.md](docs/SERVICES.md)。舊 `run.py` 仍只啟動 CSRF；要一起啟動全部，在 Windows 執行 `python run_all.py`。
+
 Ubuntu VM 一鍵設定：clone 後執行 `bash setup.sh`，再用 `cat instance/setup-credentials.json` 查看首次建立的帳號密碼及課程代碼；執行 `.venv/bin/python run.py` 啟動。腳本自動建立 .env 與 pony 管理員、alice、bob、demo_hacker，重跑保留現有資料。詳見 [VM_SETUP.md](docs/VM_SETUP.md)。
 
 目前 Playground 已移除所有 Payload 輸入、編輯與複製介面。下方僅有預設收合的唯讀教學說明；學生以 F12 → Elements → reward-form 修改 recipient／amount 的 hidden input value，再按領取按鈕。重新整理恢復固定駭客帳號與 NT$100。下文較早的編輯器操作以此最新流程為準。
