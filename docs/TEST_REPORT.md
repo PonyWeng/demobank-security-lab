@@ -1,5 +1,9 @@
 # 實際驗收記錄
 
+## 統一教師帳密與 UI 修改
+
+首次 pony / ponypony、alice / alice001、bob / bob00100，銀行 demo_hacker / hacker001；既有資料保留。25 項後端測試通過。新增測試分別從銀行與 SQL 教師介面修改密碼，確認兩個資料庫雜湊、兩份 JSON 同步、錯誤舊密碼與缺少 Token 拒絕，以及其他網站的舊登入失效。README 已重整為合併版唯一完整操作說明。
+
 ## 合併版服務
 
 CSRF + SQL Injection + XSS 合併到同一 repo；24 項後端測試通過。以 run_all.py --port-offset 200 實際啟動五個服務，各自 HTTP 200。四個 Shell 腳本 Bash 語法檢查通過。SQL／XSS 另已在 Edge 實測登入繞過、Protected 拒絕、腳本執行、編碼與 CSP，以及 Collector 回應。背景服務腳本依賴 Linux /proc，尚未在 Ubuntu 實際啟停或建立公網 Tunnel；本機沒有因此對外發布新網站。機密檔案及兩套資料庫均由 gitignore 排除。

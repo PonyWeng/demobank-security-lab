@@ -41,12 +41,12 @@ def bootstrap(root):
                 if admin and not existing['is_admin']:
                     raise RuntimeError('Existing pony is not an administrator; no privilege or password changes made.')
                 continue
-            password = secrets.token_urlsafe(18)
+            password = {'pony':'ponypony','alice':'alice001','bob':'bob00100'}[username]
             uid = db.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?)',(username,generate_password_hash(password),admin)).lastrowid
             db.execute('INSERT INTO accounts(user_id,number,balance) VALUES (?,?,500000)',(uid,number))
             credentials['accounts'][username] = {'password':password,'account':number,'role':'admin' if admin else 'student'}
         if fresh_db:
-            password = secrets.token_urlsafe(18)
+            password = 'hacker001'
             db.execute('UPDATE users SET password_hash=? WHERE username=?',(generate_password_hash(password),'demo_hacker'))
             credentials['accounts']['demo_hacker'] = {'password':password,'account':'DBHACKER001','role':'demo hacker'}
         temporary = credentials_path.with_suffix('.tmp')

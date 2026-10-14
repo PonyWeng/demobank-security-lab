@@ -156,6 +156,24 @@ def create_app(kind,config=None):
         session['generation']=generation
         flash('學生、留言與收集紀錄已清除，管理員及端點保留')
         return redirect('/admin')
+    @app.route('/password',methods=['GET','POST'])
+    def password_page():
+        teacher()
+        if session['username']!='pony':abort(403)
+        if request.method=='POST':
+            verify()
+            with db() as c: user=c.execute('SELECT password_hash FROM users WHERE username=?',('pony',)).fetchone()
+            if not check_password_hash(user['password_hash'],request.form.get('old_password','')):abort(403,'目前密碼不正確')
+            password=request.form.get('new_password','')
+            if not 8<=len(password)<=128 or password!=request.form.get('confirmation'):abort(400,'新密碼需 8–128 字元且確認一致')
+            from teacher_password import sync_password,bank_database
+            try: _,generation=sync_password(bank_database(),database(),password)
+            except ValueError as error:abort(400,str(error))
+            session['generation']=generation
+            session.pop('token',None)
+            flash('各 Lab 的 pony 密碼及 JSON 已同步')
+            return redirect('/admin')
+        return render_template('password.html')
     @app.post('/logout')
     def logout():
         verify();session.clear();return redirect('/login')

@@ -8,6 +8,10 @@ from .demo import HACKER_USERNAME
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
+@bp.route('/password',methods=['GET','POST'])
+def password_page():
+    return password_impl()
+
 
 def is_admin():
     if not session.get('uid'):
@@ -24,6 +28,28 @@ def admin_required(fn):
             abort(403, '此頁面僅限管理員')
         return fn(*args, **kwargs)
     return wrapped
+
+@admin_required
+def password_impl():
+    from werkzeug.security import check_password_hash
+    if session.get('uid'):
+        with connect() as db:
+            user=db.execute('SELECT username,password_hash FROM users WHERE id=?',(session['uid'],)).fetchone()
+    if user['username']!='pony':abort(403,'此功能限 pony 教師帳戶')
+    if request.method=='POST':
+        verify_token()
+        if not check_password_hash(user['password_hash'],request.form.get('old_password','')):abort(403,'目前密碼不正確')
+        password=request.form.get('new_password','')
+        if not 8<=len(password)<=128 or password!=request.form.get('confirmation'):abort(400,'新密碼需 8–128 字元且確認一致')
+        from teacher_password import sync_password
+        from attacks.lab import database
+        try: generation,_=sync_password(current_app.config['DATABASE'],database(),password)
+        except ValueError as error:abort(400,str(error))
+        session['generation']=generation
+        session.pop('csrf',None)
+        flash('各 Lab 的 pony 密碼與 JSON 紀錄已同步，其他登入已失效。')
+        return redirect(url_for('admin.dashboard'))
+    return render_template('teacher_password.html')
 
 @bp.post('/endpoints')
 @admin_required
