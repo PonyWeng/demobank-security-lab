@@ -1,0 +1,92 @@
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .login-container {
+            max-width: 380px;
+            margin: 90px auto;
+            background: #ffffff;
+            padding: 36px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 26px;
+            color: #222;
+            letter-spacing: 0.4px;
+            font-weight: 600;
+        }
+
+        label {
+            font-size: 14px;
+            color: #555;
+            float: left;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .field-group {
+            margin-bottom: 22px;
+            text-align: left;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .password-box {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+            color: #777;
+            font-size: 13px;
+            user-select: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 0;
+            border-radius: 6px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .register-link {
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .register-link a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+    
+*{box-sizing:border-box}.container,.box{max-width:calc(100% - 32px)}.container{margin-bottom:90px}textarea{display:block;width:100%;min-height:100px;padding:12px;font:inherit}table{display:block;overflow-x:auto}td{overflow-wrap:anywhere}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #e6a400;outline-offset:3px}.lab-links{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap}.lab-links a{position:static}.logout-btn,.logout{border:0;cursor:pointer}
+
+.original-footer{text-align:center;color:#8b949e;padding:14px;background:#161b22;position:fixed;left:0;bottom:0;width:100%;font-size:14px;border-top:1px solid #30363d}

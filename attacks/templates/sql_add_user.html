@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Add new user</title>
+    <link rel="stylesheet" href="/static/sql_add_user.css">
+</head>
+<body>
+
+<div class="box">
+    <h2>Add new user</h2>
+
+    <form method="POST"><input type="hidden" name="csrf_token" value="{{ token() }}">
+        <label>Username</label>
+        <input type="text" name="username" required>
+
+        <label>Password</label>
+        <input type="password" name="password" required>
+
+        <label>
+            <input type="checkbox" name="isAdmin"> Is Admin
+        </label>
+
+        <button type="submit">Add User</button>
+    </form>
+
+    <div class="msg">{{ message }}</div>
+
+    <a href="/">← Back</a>
+</div>
+{% include 'original_footer.html' %}
+</body>
+</html>

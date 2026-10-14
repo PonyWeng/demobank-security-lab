@@ -15,7 +15,21 @@ def apps(tmp_path,monkeypatch):
     return apps
 
 def token(c,path='/login'):
-    return re.search('name="csrf_token" type="hidden" value="([^"]+)"',c.get(path).text)[1]
+    return re.search('name="csrf_token"[^>]*value="([^"]+)"',c.get(path).text)[1]
+
+def test_original_features(apps):
+    sql=apps['sql'].test_client();login(sql,'pony')
+    page=sql.get('/').text
+    assert 'Database Structure &amp; Data' in page or 'Database Structure & Data' in page
+    assert 'Table: users' in page and 'password_hash' in page and 'Add new User' in page
+    data={'csrf_token':token(sql,'/admin/users/add'),'username':'new_student','password':'student-pass-123'}
+    assert 'User added successfully!' in sql.post('/admin/users/add',data=data).text
+    student=apps['xss'].test_client();login(student)
+    assert student.get('/admin/users/add').status_code==403
+    student.post('/',data={'csrf_token':token(student,'/security'),'content':'hello'})
+    with lab.db() as c:mid=c.execute('SELECT id FROM messages').fetchone()[0]
+    assert 'xss_board.css' in student.get('/').text
+    assert student.post(f'/delete_message/{mid}',data={'csrf_token':token(student,'/security')}).status_code==302
 
 def login(c,name='alice',teacher=False):
     path='/teacher/login' if teacher else '/login'

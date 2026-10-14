@@ -82,7 +82,7 @@ def create_app(kind,config=None):
                 with db() as c: c.execute('INSERT INTO users(username,password_hash) VALUES (?,?)',(name,generate_password_hash(password)))
                 return redirect('/login')
             except sqlite3.IntegrityError: flash('帳號已存在')
-        return render_template('auth.html',register=True)
+        return render_template('xss_register.html' if kind=='xss' else 'auth.html',register=True)
     @app.route('/login',methods=['GET','POST'])
     @app.route('/teacher/login',methods=['GET','POST'])
     def login():
@@ -101,10 +101,11 @@ def create_app(kind,config=None):
                 generation=c.execute("SELECT value FROM settings WHERE key='generation'").fetchone()['value']
             if user and (not is_teacher or user['is_admin']):
                 mode=session.get('mode','vulnerable'); gate=session.get('gate',False)
-                session.clear();session.update(username=user['username'],teacher=is_teacher,generation=generation,mode=mode,gate=gate)
+                verified_admin=bool(valid and real and user['id']==real['id'] and user['is_admin'])
+                session.clear();session.update(username=user['username'],teacher=verified_admin,generation=generation,mode=mode,gate=gate)
                 return redirect('/admin' if is_teacher else '/')
             flash('登入失敗')
-        return render_template('auth.html',is_teacher=is_teacher)
+        return render_template(f'{kind}_login.html' if kind in ('sql','xss') else 'auth.html',is_teacher=is_teacher)
     @app.route('/',methods=['GET','POST'])
     def index():
         if kind=='collector':
@@ -112,6 +113,14 @@ def create_app(kind,config=None):
             with db() as c: rows=c.execute('SELECT * FROM captures ORDER BY id DESC LIMIT 100').fetchall()
             return render_template('collector.html',rows=rows)
         if not logged(): return redirect('/login')
+        if kind=='sql' and request.method=='GET':
+            with db() as c:
+                tables=[]
+                for name in ('users','messages','captures'):
+                    columns=c.execute(f'PRAGMA table_info({name})').fetchall()
+                    data=c.execute(f'SELECT * FROM {name} LIMIT 100').fetchall()
+                    tables.append({'table':name,'columns':columns,'rows':data})
+            return render_template('sql_index.html',db_info=tables,user=session['username'],isAdmin=int(session.get('teacher',False)))
         if request.method=='POST':
             verify()
             if kind=='xss':
@@ -120,7 +129,36 @@ def create_app(kind,config=None):
                 with db() as c: c.execute('INSERT INTO messages(username,content) VALUES (?,?)',(session['username'],content))
             return redirect('/')
         with db() as c: rows=c.execute('SELECT * FROM messages ORDER BY id DESC LIMIT 100').fetchall() if kind=='xss' else []
-        return render_template('index.html',rows=rows)
+        return render_template('xss_board.html',messages=rows,user_id=session['username'])
+    @app.post('/delete_message/<int:msg_id>')
+    def delete_message(msg_id):
+        if kind!='xss':abort(404)
+        if not logged():abort(403)
+        verify()
+        with db() as c:
+            row=c.execute('SELECT username FROM messages WHERE id=?',(msg_id,)).fetchone()
+            if not row:abort(404)
+            if row['username']!=session['username']:abort(403)
+            c.execute('DELETE FROM messages WHERE id=?',(msg_id,))
+        return redirect('/')
+    @app.post('/admin/clear_messages')
+    def clear_messages():
+        teacher();verify()
+        with db() as c:c.execute('DELETE FROM messages')
+        return redirect('/')
+    @app.route('/admin/users/add',methods=['GET','POST'])
+    def add_user():
+        teacher()
+        message=''
+        if request.method=='POST':
+            verify()
+            name=request.form.get('username','').strip();password=request.form.get('password','')
+            if not name.isascii() or not name.replace('_','').isalnum() or not 3<=len(name)<=32 or not 8<=len(password)<=128:abort(400,'帳號或密碼格式不正確')
+            try:
+                with db() as c:c.execute('INSERT INTO users(username,password_hash,is_admin) VALUES (?,?,?)',(name,generate_password_hash(password),int(request.form.get('isAdmin')=='on')))
+                message='User added successfully!'
+            except sqlite3.IntegrityError:message='User already exists.'
+        return render_template('sql_add_user.html',message=message)
     @app.route('/security',methods=['GET','POST'])
     def security():
         if request.method=='POST':

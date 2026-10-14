@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SQL Injection Login</title>
+    <link rel="stylesheet" href="/static/sql_login.css">
+</head>
+<body>
+
+<div class="login-box">
+    <h1>SQL injection Practice</h1>
+    <h2>Login</h2>
+
+    <form method="POST"><input type="hidden" name="csrf_token" value="{{ token() }}">
+        <label>Username</label>
+        <input type="text" name="username">
+
+        <label>Password</label>
+        <input type="password" name="password">
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div class="msg">{{ message }}</div>
+</div>
+{% include 'original_footer.html' %}
+<div class="lab-links"><a href="/security">更改安全設定</a><a href="/teacher/login">教師登入</a><a href="/register">註冊</a></div>{% for text in get_flashed_messages() %}<p>{{ text }}</p>{% endfor %}</body>
+</html>

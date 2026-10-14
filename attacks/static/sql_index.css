@@ -1,0 +1,111 @@
+
+        body {
+            background: #0d1117;
+            color: #c9d1d9;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .container {
+            width: 900px;
+            margin: 50px auto;
+            background: #161b22;
+            padding: 40px;
+            border-radius: 12px;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            color: #58a6ff;
+        }
+
+        h2 {
+            margin-top: 30px;
+            color: #58a6ff;
+        }
+
+        /* User Info box */
+        .userinfo-box {
+            background: #21262d;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #30363d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .userinfo-text {
+            font-size: 1.1rem;
+        }
+
+        .badge-admin {
+            background: #238636;
+            padding: 6px 14px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .badge-user {
+            background: #6e7681;
+            padding: 6px 14px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Admin button */
+        .admin-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #238636;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        /* Logout button */
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #da3633;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .logout-btn:hover {
+            background: #b62324;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #30363d;
+        }
+
+        th {
+            background: #21262d;
+        }
+
+        tr:nth-child(even) {
+            background: #1b1f24;
+        }
+    
+*{box-sizing:border-box}.container,.box{max-width:calc(100% - 32px)}.container{margin-bottom:90px}textarea{display:block;width:100%;min-height:100px;padding:12px;font:inherit}table{display:block;overflow-x:auto}td{overflow-wrap:anywhere}input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #e6a400;outline-offset:3px}.lab-links{margin:14px 0;display:flex;gap:16px;flex-wrap:wrap}.lab-links a{position:static}.logout-btn,.logout{border:0;cursor:pointer}
+
+.original-footer{text-align:center;color:#8b949e;padding:14px;background:#161b22;position:fixed;left:0;bottom:0;width:100%;font-size:14px;border-top:1px solid #30363d}
+.lab-links a{color:#58a6ff}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>登入</title>
+    <link rel="stylesheet" href="/static/xss_login.css">
+</head>
+
+<body>
+
+    <div class="login-container">
+        <h2>酷酷的留言板</h2>
+
+        <form method="post"><input type="hidden" name="csrf_token" value="{{ token() }}">
+
+            <div class="field-group">
+                <label>帳號</label>
+                <input type="text" name="username" placeholder="請輸入帳號" required>
+            </div>
+
+            <div class="field-group password-box">
+                <label>密碼</label>
+                <input type="password" name="password" id="pw" placeholder="請輸入密碼" required>
+                
+            </div>
+
+            <button type="submit">登入</button>
+        </form>
+
+        <div class="register-link">
+            還沒有帳號？ <a href="/register">註冊</a>
+        </div>
+    </div>
+
+{% include 'original_footer.html' %}
+<div class="lab-links"><a href="/security">更改安全設定</a><a href="/teacher/login">教師登入</a><a href="/register">註冊</a></div>{% for text in get_flashed_messages() %}<p>{{ text }}</p>{% endfor %}</body>
+
+</html>

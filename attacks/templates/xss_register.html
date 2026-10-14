@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>學生註冊</title>
+    <link rel="stylesheet" href="/static/xss_register.css">
+</head>
+<body>
+
+    <div class="register-container">
+        <h2>註冊</h2>
+
+        {% if message %}
+            {% if status == "ok" %}
+                <div class="msg-success">{{ message }}</div>
+            {% else %}
+                <div class="msg-error">{{ message }}</div>
+            {% endif %}
+        {% endif %}
+
+        {% if not redirect_login %}
+        <form method="post"><input type="hidden" name="csrf_token" value="{{ token() }}">
+
+            <label>帳號</label>
+            <input type="text" name="username" placeholder="例如：s123456789" required>
+
+            <label>密碼</label>
+            <input type="password" name="password" placeholder="請輸入密碼" required>
+
+            <button type="submit">註冊</button>
+        </form>
+        {% endif %}
+
+        <div class="login-link">
+            已經有帳號？ <a href="/login">登入</a>
+        </div>
+    </div>
+
+    {% if redirect_login %}
+    <script>
+        setTimeout(() => {
+            window.location.href = "/login";
+        }, 2000);  // 2 秒後跳轉
+    </script>
+    {% endif %}
+{% include 'original_footer.html' %}
+{% for text in get_flashed_messages() %}<p>{{ text }}</p>{% endfor %}</body>
+</html>

