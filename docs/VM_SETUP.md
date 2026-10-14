@@ -2,7 +2,9 @@
 
 ```bash
 sudo apt update
-sudo apt install -y git python3 python3-venv
+sudo apt install -y git gh python3 python3-venv
+gh auth login
+gh auth setup-git
 git clone https://github.com/PonyWeng/demobank-security-lab.git
 cd demobank-security-lab
 python3 -m venv .venv
@@ -10,6 +12,8 @@ python3 -m venv .venv
 cp .env.example .env
 .venv/bin/python -c 'import secrets; print(secrets.token_urlsafe(48))'
 ```
+
+儲存庫預設為 private，gh auth login 請登入 PonyWeng，選 GitHub.com / HTTPS / browser login；依畫面用你的瀏覽器完成授權。不要把 Token 放到 clone URL 或提交至 Git。若 VM 不方便進行授權，可改用帳號允許的 SSH deploy key。
 
 把輸出的隨機值填到 .env 的 SECRET_KEY，設定 LAB_ACCESS_CODE。不要使用本機的舊 Secret。建立 VM 自己的管理員（互動輸入新密碼，不在指令列輸入）：
 
