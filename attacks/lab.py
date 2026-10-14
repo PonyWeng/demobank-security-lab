@@ -140,7 +140,7 @@ def create_app(kind,config=None):
         if kind=='sql' and request.method=='GET':
             with db() as c:
                 tables=[]
-                for name in ('users','messages','captures'):
+                for name in ('users',):
                     if name=='users':
                         from attacks.sql_demo import connect as demo_connect
                         with demo_connect(database().with_suffix('.sql-demo.sqlite')) as demo:
@@ -170,8 +170,16 @@ def create_app(kind,config=None):
             from attacks.sql_demo import connect as demo_connect, login as demo_login
             with demo_connect(database().with_suffix('.sql-demo.sqlite')) as c:
                 try:
+                    before={r['id']:dict(r) for r in c.execute('SELECT * FROM users')}
                     row,query=demo_login(c,name,password,session.get('mode','vulnerable')=='protected')
-                    result=('模擬登入成功：'+row['username']+' · '+('假管理員' if row['isAdmin'] else '一般示範帳號')) if row else '模擬登入失敗（請回資料表查看異動）'
+                    after={r['id']:dict(r) for r in c.execute('SELECT * FROM users')}
+                    changes=[]
+                    for label,ids,records in [('新增',after.keys()-before.keys(),after),('刪除',before.keys()-after.keys(),before),('修改',{i for i in before.keys() & after.keys() if before[i]!=after[i]},after)]:
+                        if ids:changes.append(f'{label} {len(ids)} 位使用者：'+', '.join(records[i]['username'] for i in sorted(ids)))
+                    if changes:
+                        result='SQL 執行成功；'+'；'.join(changes)+'。請返回資料表查看結果。'
+                    else:
+                        result=(('模擬登入成功：'+row['username']+' · '+('管理員' if row['isAdmin'] else '一般使用者')) if row else '模擬登入失敗')+'；資料未變更。'
                 except sqlite3.Error as error:
                     c.rollback()
                     result='SQL 錯誤：'+str(error)

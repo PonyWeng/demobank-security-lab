@@ -41,6 +41,20 @@ def test_sql_modes(apps):
     c.post('/security',data={'csrf_token':token(c),'mode':'protected'})
     assert '模擬登入失敗' in c.post('/simulate/login',data={**data,'csrf_token':token(c)}).text
 
+def test_sql_changes_reported_and_only_users_shown(apps):
+    c=apps['sql'].test_client();login(c)
+    def submit(payload):
+        return c.post('/simulate/login',data={'csrf_token':token(c),'username':payload,'password':'bad'}).text
+    assert '新增 1 位使用者：hacker' in submit("ADMIN'; INSERT INTO users(username,password,isAdmin) VALUES ('hacker','9999',1); -- ")
+    assert '修改 1 位使用者：pony' in submit("'; UPDATE users SET isAdmin=1 WHERE username='pony'; -- ")
+    assert '刪除 1 位使用者：pony' in submit("hacker'; DELETE FROM users WHERE username='pony'; -- ")
+    assert '資料未變更' in submit("hacker'; DELETE FROM users WHERE username='missing'; -- ")
+    page=c.get('/').text
+    assert 'Table: users' in page and 'hacker' in page
+    assert 'Table: messages' not in page and 'Table: captures' not in page
+    assert '假管理員' not in page and 'Columns' not in page
+    assert c.get('/admin').status_code==403
+
 def test_xss_encoding_and_csp(apps):
     c=apps['xss'].test_client();login(c)
     payload="<script>alert('CLASSROOM')</script>"
