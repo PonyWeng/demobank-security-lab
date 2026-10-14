@@ -1,0 +1,20 @@
+name: demobank-lab
+services:
+  bank:
+    build: .
+    env_file: .env
+    ports: ["127.0.0.1:5000:5000"]
+    volumes: ["bank-data:/app/instance"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+  attacker:
+    build: .
+    env_file: .env
+    command: ["python", "attacker.py", "--host", "0.0.0.0"]
+    ports: ["127.0.0.1:5001:5001"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+volumes:
+  bank-data:

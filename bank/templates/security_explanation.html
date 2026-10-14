@@ -1,0 +1,24 @@
+<section class="panel security-explanation">
+<h2>目前改了什麼？</h2>
+{% if session.get('lab_changes') %}<p>最近一次套用：</p><ul>{% for change in session.lab_changes %}<li>{{ change }}</li>{% endfor %}</ul>{% else %}<p>以下顯示目前生效的設定。選擇上方模式並套用後，這裡會列出本次變更。</p>{% endif %}
+<div class="table-scroll"><table><thead><tr><th>防護項目</th><th>目前狀態</th><th>加在哪裡？</th></tr></thead><tbody>
+<tr><td>CSRF Token</td><td>{{ '啟用：缺少或錯誤 Token → 403' if lab.csrf == 'protected' else '停用：轉帳不檢查 Token' }}</td><td>銀行表單 hidden 欄位 + 後端 POST /transfer 檢查</td></tr>
+<tr><td>Origin 驗證</td><td>{{ '啟用：來源不同或缺少 Origin → 403' if lab.origin else '停用：不比對請求來源' }}</td><td>後端比較 Request Headers 的 Origin 與銀行網址</td></tr>
+<tr><td>SameSite / Secure</td><td>{{ cookie }} / {{ secure }}</td><td>銀行回應 Set-Cookie；由瀏覽器決定是否附帶 Cookie</td></tr>
+</tbody></table></div>
+<h3>CSRF Token：表單與伺服器兩邊都要加入</h3>
+<p><code>bank/security.py → token()</code> 產生隨機 Token 存入 Session；<code>bank/templates/dashboard.html</code> 的正常轉帳表單加入 hidden 欄位。兩種模式的銀行表單都有 Token，切換模式改變的是後端是否驗證。</p>
+<pre><code>&lt;input type="hidden" name="csrf_token" value="本次 Session 的隨機 Token"&gt;</code></pre>
+<p><code>bank/routes.py → transfer()</code> 在修改餘額之前呼叫 <code>verify_transfer()</code>；Protected 會進入 <code>bank/security.py → verify_token()</code>，用固定時間比較檢查表單 Token 與 Session Token。B 的活動表單沒有正確 Token，因此被拒絕。</p>
+<pre><code>if settings()['csrf'] == 'protected':
+    verify_token()  # 缺少或不符 → abort(403)</code></pre>
+<h3>Origin：在後端檢查這個請求從哪裡來</h3>
+<p><code>bank/security.py → verify_transfer()</code> 讀取瀏覽器傳來的 Origin，與 <code>bank/endpoints.py → endpoints()['bank']</code> 精確比對。允許的銀行來源目前為 <strong>{{ endpoints.bank }}</strong>。B 網站的 Origin 不同，因此啟用後會被拒絕；此驗證不需要在轉帳表單新增欄位。</p>
+<pre><code>if settings()['origin'] and request.headers.get('Origin') != endpoints()['bank']:
+    abort(403)</code></pre>
+<h3>Cookie：防護由瀏覽器執行</h3>
+<p><code>bank/__init__.py</code> 設定 HttpOnly、SameSite、Secure；<code>bank/endpoints.py → LabSessionInterface</code> 套用管理員選擇的 HTTPS 跨 Site Demo 策略。SameSite 的 Lax / Strict 會限制跨 Site POST Cookie，仍允許相同 Site 的跨 Origin POST。None + Secure 允許 HTTPS 跨 Site Cookie，不代表請求有正確 Token。HttpOnly 防止 JavaScript 讀取登入 Cookie，不能單獨阻止 CSRF。</p>
+<h3>用同一個 Payload 比較</h3>
+<ol><li>Vulnerable、Origin 關閉：B 的活動表單可以轉帳。</li><li>Protected、Origin 關閉：同一表單缺少 Token，回傳 403。</li><li>Vulnerable、Origin 開啟：同一表單來源不同，回傳 403。</li><li>到銀行使用正常轉帳表單：包含正確 Token、Origin 為銀行，仍可成功。</li></ol>
+<p>設定 POST /lab 本身始終驗證 Token；變更只存在你的 Session，不會改到其他同學的模式，也不會修改原始碼。</p>
+</section>
