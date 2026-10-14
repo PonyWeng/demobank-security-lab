@@ -8,7 +8,7 @@
 <body>
 
     <div class="register-container">
-        <h2>註冊</h2>
+        <h2>註冊學生帳號</h2><p>SQL、XSS、Collector 共用帳號，無需重複註冊。密碼至少 8 字元，註冊成功直接進入留言板。</p>
 
         {% if message %}
             {% if status == "ok" %}
@@ -22,10 +22,10 @@
         <form method="post"><input type="hidden" name="csrf_token" value="{{ token() }}">
 
             <label>帳號</label>
-            <input type="text" name="username" placeholder="例如：s123456789" required>
+            <input type="text" name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_]{3,32}" placeholder="例如：s123456789" required>
 
             <label>密碼</label>
-            <input type="password" name="password" placeholder="請輸入密碼" required>
+            <input type="password" name="password" minlength="8" maxlength="128" placeholder="請輸入密碼" required>
 
             <button type="submit">註冊</button>
         </form>

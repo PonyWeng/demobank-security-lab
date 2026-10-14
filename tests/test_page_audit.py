@@ -42,13 +42,15 @@ def test_all_page_layouts(tmp_path,monkeypatch):
                    'sql':['/login','/teacher/login','/register','/','/security','/admin','/admin/users/add','/password'],
                    'xss':['/login','/teacher/login','/register','/','/security','/admin','/password'],
                    'collector':['/login','/teacher/login','/register','/','/security','/admin','/password']}
-            page=ctx.new_page();errors=[]
-            page.on('pageerror',lambda error:errors.append(str(error)))
-            page.on('response',lambda response:errors.append(f'CSS failure {response.url}') if '.css' in response.url and response.status>=400 else None)
+            member_page=ctx.new_page();guest=browser.new_context();guest_page=guest.new_page();errors=[]
+            for current in [member_page,guest_page]:
+                current.on('pageerror',lambda error:errors.append(str(error)))
+                current.on('response',lambda response:errors.append(f'CSS failure {response.url}') if '.css' in response.url and response.status>=400 else None)
             output=Path('test-results/page-audit');output.mkdir(parents=True,exist_ok=True)
             audited=[]
             for kind,routes in paths.items():
                 for route in routes:
+                    page=guest_page if route in ['/login','/teacher/login','/register'] else member_page
                     page.set_viewport_size({'width':1280,'height':900})
                     response=page.goto(origins[kind]+route)
                     assert response.status==200,(kind,route,response.status)

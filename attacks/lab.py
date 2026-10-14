@@ -53,6 +53,11 @@ def create_app(kind,config=None):
         with db() as c:
             u=c.execute('SELECT is_admin FROM users WHERE username=?',(session['username'],)).fetchone()
         if not u or not u['is_admin']: abort(403)
+    def sign_in(user,admin=False):
+        with db() as c:generation=c.execute("SELECT value FROM settings WHERE key='generation'").fetchone()['value']
+        mode=session.get('mode','vulnerable');gate=session.get('gate',False)
+        session.clear()
+        session.update(username=user['username'],teacher=admin,generation=generation,mode=mode,gate=gate)
     @app.context_processor
     def helpers():
         from teacher_password import bank_database
@@ -80,19 +85,33 @@ def create_app(kind,config=None):
         return render_template('auth.html',access=True)
     @app.route('/register',methods=['GET','POST'])
     def register():
+        if request.method=='GET' and logged():return redirect('/')
         if request.method=='POST':
             verify()
             name=request.form.get('username','').strip(); password=request.form.get('password','')
-            if not name.isascii() or not name.replace('_','').isalnum() or not 3<=len(name)<=32 or not 8<=len(password)<=128: abort(400)
-            try:
-                with db() as c: c.execute('INSERT INTO users(username,password_hash) VALUES (?,?)',(name,generate_password_hash(password)))
-                return redirect('/login')
-            except sqlite3.IntegrityError: flash('帳號已存在')
+            if not name.isascii() or not name.replace('_','').isalnum() or not 3<=len(name)<=32 or not 8<=len(password)<=128:
+                flash('帳號需 3–32 字元英數或底線；密碼需 8–128 字元。')
+            else:
+                with db() as c:
+                    c.execute('BEGIN IMMEDIATE')
+                    existing=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
+                    if not existing:
+                        c.execute('INSERT INTO users(username,password_hash) VALUES (?,?)',(name,generate_password_hash(password)))
+                        existing=c.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
+                        valid=True
+                    else:valid=check_password_hash(existing['password_hash'],password)
+                if valid:
+                    sign_in(existing,bool(existing['is_admin']))
+                    flash('已登入。此帳號可用於 SQL、XSS 與 Collector，不需再註冊。')
+                    return redirect('/')
+                flash('帳號已存在，請使用原密碼登入，或換一個帳號。')
         return render_template('xss_register.html' if kind=='xss' else 'auth.html',register=True)
     @app.route('/login',methods=['GET','POST'])
     @app.route('/teacher/login',methods=['GET','POST'])
     def login():
         is_teacher=request.path.startswith('/teacher')
+        if request.method=='GET' and logged() and (not is_teacher or session.get('teacher')):
+            return redirect('/admin' if is_teacher else '/')
         if request.method=='POST':
             verify()
             name=request.form.get('username',''); password=request.form.get('password','')

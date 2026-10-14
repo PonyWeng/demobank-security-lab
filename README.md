@@ -16,6 +16,8 @@ Flask、SQLite、HTML/CSS/JavaScript 的大學資安教學靶機，包含 CSRF�
 
 學生統一入口：銀行公開網址加 `/labs`。入口提供銀行、SQL、XSS、Collector 的學生登入／註冊與教師登入，各頁導覽可回「Lab 總覽」。這是統一選單，不是跨站共用 Session；學生選擇 Lab 後在該站登入。
 
+入口的「進入實驗」會直接開該 Lab 首頁，已登入不再要求登入。SQL／XSS／Collector 共用同一組帳號，只需註冊一次；註冊成功自動登入目前網站，不需立即再登入。密碼至少 8 字元；格式錯誤顯示在表單，不回裸 Bad Request。已有帳號可直接登入；若在註冊頁填原帳密，也會驗證後進入。銀行帳號仍獨立，跨網站 Session 仍需各站首次登入。
+
 ## Ubuntu / GCP VM
 
 私人儲存庫首次 clone，請先以 GitHub CLI 或 SSH key 登入 PonyWeng：
